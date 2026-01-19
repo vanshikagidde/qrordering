@@ -12,31 +12,24 @@ if (!isset($_SESSION['order'])) {
 $order  = $_SESSION['order'];
 $status = $_GET['status'] ?? '';
 
-
 if ($status !== 'success') {
   die("Payment failed");
 }
 
-$shop_id  = $order['shop_id'];
+$order_id = (int)$order['order_id'];
+$shop_id  = (int)$order['shop_id'];
 $table_no = $order['table_no'];
 
-$total = 0;
-foreach ($order['cart'] as $menu_id => $qty) {
-  $q = mysqli_query($conn, "SELECT price FROM menu WHERE id='$menu_id'");
-  $item = mysqli_fetch_assoc($q);
-  $total += $item['price'] * $qty;
-}
-
 /* =========================
-   TOKEN GENERATION (FIXED)
+   TOKEN GENERATION
    ========================= */
 
 $q = mysqli_query(
   $conn,
-  "SELECT order_token FROM orders
-   WHERE shop_id = '$shop_id'
-   AND order_token IS NOT NULL
-   ORDER BY id DESC
+  "SELECT token FROM orders
+   WHERE shop_id = $shop_id
+   AND token IS NOT NULL
+   ORDER BY order_id DESC
    LIMIT 1"
 );
 
@@ -45,7 +38,7 @@ if (!$q) {
 }
 
 if (mysqli_num_rows($q) > 0) {
-  $last_token = mysqli_fetch_assoc($q)['order_token'];
+  $last_token = mysqli_fetch_assoc($q)['token'];
   $token_number = intval($last_token) + 1;
 } else {
   $token_number = 1; // FIRST ORDER FOR THIS SHOP
@@ -54,33 +47,21 @@ if (mysqli_num_rows($q) > 0) {
 $order_token = str_pad($token_number, 2, "0", STR_PAD_LEFT);
 
 /* =========================
-   SAVE ORDER (FIXED)
+   UPDATE ORDER TO PAID
    ========================= */
 
-if ($table_no) {
-  $sql = "INSERT INTO orders (shop_id, table_no, order_token, payment_status, total)
-          VALUES ('$shop_id', '$table_no', '$order_token', 'paid', '$total')";
-} else {
-  $sql = "INSERT INTO orders (shop_id, order_token, payment_status, total)
-          VALUES ('$shop_id', '$order_token', 'paid', '$total')";
+$update_sql = "UPDATE orders 
+               SET token = '$order_token', 
+                   status = 'paid' 
+               WHERE order_id = $order_id 
+               AND shop_id = $shop_id";
+
+if (!mysqli_query($conn, $update_sql)) {
+  die("Order update error: " . mysqli_error($conn));
 }
 
-if (!mysqli_query($conn, $sql)) {
-  die("Order insert error: " . mysqli_error($conn));
-}
-
-$order_id = mysqli_insert_id($conn);
-
-/* =========================
-   SAVE ITEMS
-   ========================= */
-
-foreach ($order['cart'] as $menu_id => $qty) {
-  mysqli_query(
-    $conn,
-    "INSERT INTO order_items (order_id, menu_id, quantity)
-     VALUES ('$order_id', '$menu_id', '$qty')"
-  );
+if (mysqli_affected_rows($conn) === 0) {
+  die("No order found to update");
 }
 
 /* =========================

@@ -19,8 +19,8 @@ $shop_name = $shop ? $shop['shop_name'] : 'Unknown Shop';
 /* Fetch ordered items */
 $items_q = mysqli_query($conn,
     "SELECT m.item_name, m.price, oi.quantity
-     FROM order_items oi
-     JOIN menu m ON oi.menu_id = m.id
+     FROM order_item oi
+     JOIN menu m ON oi.item_id = m.id
      WHERE oi.order_id='$order_id'"
 );
 ?>

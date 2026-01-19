@@ -3,7 +3,7 @@
 $servername = "127.0.0.1:3307";   // or localhost
 $username = "root";
 $password = "";               // XAMPP default password is empty
-$dbname = "qrordering";           // your database name
+$dbname = "qr_ordering";           // your database name
 
 // Create connection
 $conn = new mysqli($servername, $username, $password, $dbname);

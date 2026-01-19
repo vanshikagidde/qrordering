@@ -6,7 +6,10 @@ if (!isset($_GET['shop'])) {
     die("Shop parameter missing");
 }
 
-$shop_name = isset($_GET['shop']) ? htmlspecialchars($_GET['shop']) : "shop";
+$shop_name = isset($_GET['shop']) 
+    ? mysqli_real_escape_string($conn, $_GET['shop']) 
+    : '';
+
 $table_no = isset($_GET['table']) ? htmlspecialchars($_GET['table']) : 'N/A';
 
 /* Fetch shop */
@@ -31,7 +34,7 @@ $menu_q = mysqli_query($conn,
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= $shop_name ?> Menu</title>
+    <title><?= htmlspecialchars($shop_name) ?> Menu</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
@@ -585,7 +588,7 @@ $menu_q = mysqli_query($conn,
         <div class="shop-icon">
             <i class="fas fa-utensils"></i>
         </div>
-        <h2><?= $shop_name ?></h2>
+        <h2><?= htmlspecialchars($shop_name) ?></h2>
         <p><i class="fas fa-chair"></i> Table <?= $table_no ?></p>
     </div>
 

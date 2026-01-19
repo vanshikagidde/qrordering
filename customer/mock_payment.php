@@ -11,7 +11,8 @@ include "../config/db.php";
 $cart = $_SESSION['order']['cart'];
 $total = 0;
 foreach ($cart as $menu_id => $qty) {
-  $q = mysqli_query($conn, "SELECT price FROM menu WHERE id='$menu_id'");
+  $menu_id = (int)$menu_id;
+  $q = mysqli_query($conn, "SELECT price FROM menu WHERE id=$menu_id");
   $item = mysqli_fetch_assoc($q);
   if ($item) {
     $total += $item['price'] * $qty;
@@ -482,7 +483,7 @@ foreach ($cart as $menu_id => $qty) {
         <div class="order-details">
             <div class="detail-row">
                 <span class="detail-label">Order ID</span>
-                <span class="detail-value order-id"><?= $_SESSION['order_id'] ?></span>
+                <span class="detail-value order-id"><?= htmlspecialchars($_SESSION['order']['order_id'] ?? 'N/A') ?></span>
             </div>
             <div class="detail-row">
                 <span class="detail-label">Items in Cart</span>
