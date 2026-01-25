@@ -1,12 +1,7 @@
 <?php
-// menu_management.php
+// orders.php - Shop Owner All Orders Page
 session_start();
 include "../config/db.php";
-
-/* ================= DEBUG (REMOVE IN PRODUCTION) ================= */
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-/* =============================================================== */
 
 if (!isset($_SESSION['shop_id']) || !isset($_SESSION['logged_in'])) {
     header("Location: login.php");
@@ -17,199 +12,101 @@ $shop_id = (int)$_SESSION['shop_id'];
 $message = '';
 $message_type = '';
 
-/* ========= SAFE COLUMN CHECK FUNCTION ========= */
-function columnExists($conn, $column) {
-    $res = mysqli_query($conn, "SHOW COLUMNS FROM menu LIKE '$column'");
-    return $res && mysqli_num_rows($res) > 0;
-}
+// Handle status update
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
+    $order_id   = (int)($_POST['order_id'] ?? 0);
+    $new_status = trim($_POST['new_status'] ?? '');
 
-$has_description  = columnExists($conn, 'description');
-$has_category     = columnExists($conn, 'category');
-$has_availability = columnExists($conn, 'is_available');
+    $allowed_statuses = ['pending', 'paid', 'completed', 'cancelled'];
 
-/* ================= FORM HANDLING ================= */
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-
-    /* -------- ADD ITEM -------- */
-    if (isset($_POST['add_item'])) {
-
-        $item_name = trim($_POST['item_name'] ?? '');
-        $price     = floatval($_POST['price'] ?? 0);
-        $description = $has_description ? trim($_POST['description'] ?? '') : '';
-        $category    = $has_category ? trim($_POST['category'] ?? 'General') : 'General';
-        $is_available = $has_availability ? (isset($_POST['is_available']) ? 1 : 0) : 0;
-
-        if ($item_name === '' || $price <= 0) {
-            $message = "Item name and valid price are required";
-            $message_type = "error";
+    if ($order_id > 0 && in_array($new_status, $allowed_statuses)) {
+        $stmt = $conn->prepare("UPDATE orders SET status = ? WHERE order_id = ? AND shop_id = ?");
+        $stmt->bind_param("sii", $new_status, $order_id, $shop_id);
+        if ($stmt->execute()) {
+            $message = "Order status updated successfully!";
+            $message_type = 'success';
         } else {
-
-            if ($has_description && $has_category && $has_availability) {
-                $stmt = $conn->prepare(
-                    "INSERT INTO menu (shop_id, item_name, description, category, price, is_available)
-                     VALUES (?, ?, ?, ?, ?, ?)"
-                );
-                $stmt->bind_param("isssdi", $shop_id, $item_name, $description, $category, $price, $is_available);
-
-            } elseif ($has_description && $has_category) {
-                $stmt = $conn->prepare(
-                    "INSERT INTO menu (shop_id, item_name, description, category, price)
-                     VALUES (?, ?, ?, ?, ?)"
-                );
-                $stmt->bind_param("isssd", $shop_id, $item_name, $description, $category, $price);
-
-            } elseif ($has_category) {
-                $stmt = $conn->prepare(
-                    "INSERT INTO menu (shop_id, item_name, category, price)
-                     VALUES (?, ?, ?, ?)"
-                );
-                $stmt->bind_param("issd", $shop_id, $item_name, $category, $price);
-
-            } else {
-                $stmt = $conn->prepare(
-                    "INSERT INTO menu (shop_id, item_name, price)
-                     VALUES (?, ?, ?)"
-                );
-                $stmt->bind_param("isd", $shop_id, $item_name, $price);
-            }
-
-            if ($stmt->execute()) {
-                $message = "Item added successfully!";
-                $message_type = "success";
-            } else {
-                $message = "DB Error: " . $stmt->error;
-                $message_type = "error";
-            }
-            $stmt->close();
+            $message = "Error updating status: " . $conn->error;
+            $message_type = 'error';
         }
-    }
-
-    /* -------- EDIT ITEM -------- */
-    elseif (isset($_POST['edit_item'])) {
-
-        $item_id = (int)$_POST['item_id'];
-        $item_name = trim($_POST['item_name'] ?? '');
-        $price = floatval($_POST['price'] ?? 0);
-        $description = $has_description ? trim($_POST['description'] ?? '') : '';
-        $category = $has_category ? trim($_POST['category'] ?? 'General') : 'General';
-        $is_available = $has_availability ? (isset($_POST['is_available']) ? 1 : 0) : 0;
-
-        if ($item_id <= 0 || $item_name === '' || $price <= 0) {
-            $message = "Invalid update data";
-            $message_type = "error";
-        } else {
-
-            if ($has_description && $has_category && $has_availability) {
-                $stmt = $conn->prepare(
-                    "UPDATE menu 
-                     SET item_name=?, description=?, category=?, price=?, is_available=? 
-                     WHERE id=? AND shop_id=?"
-                );
-                $stmt->bind_param("sssdiii", $item_name, $description, $category, $price, $is_available, $item_id, $shop_id);
-
-            } elseif ($has_description && $has_category) {
-                $stmt = $conn->prepare(
-                    "UPDATE menu 
-                     SET item_name=?, description=?, category=?, price=? 
-                     WHERE id=? AND shop_id=?"
-                );
-                $stmt->bind_param("sssdii", $item_name, $description, $category, $price, $item_id, $shop_id);
-
-            } elseif ($has_category) {
-                $stmt = $conn->prepare(
-                    "UPDATE menu 
-                     SET item_name=?, category=?, price=? 
-                     WHERE id=? AND shop_id=?"
-                );
-                $stmt->bind_param("ssdii", $item_name, $category, $price, $item_id, $shop_id);
-
-            } else {
-                $stmt = $conn->prepare(
-                    "UPDATE menu 
-                     SET item_name=?, price=? 
-                     WHERE id=? AND shop_id=?"
-                );
-                $stmt->bind_param("sdii", $item_name, $price, $item_id, $shop_id);
-            }
-
-            if ($stmt->execute()) {
-                $message = "Item updated successfully!";
-                $message_type = "success";
-            } else {
-                $message = "Update error: " . $stmt->error;
-                $message_type = "error";
-            }
-            $stmt->close();
-        }
-    }
-
-    /* -------- DELETE ITEM -------- */
-    elseif (isset($_POST['delete_item'])) {
-        $item_id = (int)$_POST['item_id'];
-        $stmt = $conn->prepare("DELETE FROM menu WHERE id=? AND shop_id=?");
-        $stmt->bind_param("ii", $item_id, $shop_id);
-        $stmt->execute();
         $stmt->close();
-
-        $message = "Item deleted successfully!";
-        $message_type = "success";
-    }
-
-    /* -------- TOGGLE AVAILABILITY -------- */
-    elseif (isset($_POST['toggle_availability']) && $has_availability) {
-        $item_id = (int)$_POST['item_id'];
-        $current = (int)$_POST['current_status'];
-        $new = $current ? 0 : 1;
-
-        $stmt = $conn->prepare(
-            "UPDATE menu SET is_available=? WHERE id=? AND shop_id=?"
-        );
-        $stmt->bind_param("iii", $new, $item_id, $shop_id);
-        $stmt->execute();
-        $stmt->close();
-
-        $message = "Availability updated!";
-        $message_type = "success";
     }
 }
 
-/* ================= LOAD MENU ITEMS ================= */
-$query = "SELECT id, item_name, price" .
-         ($has_description ? ", description" : "") .
-         ($has_category ? ", category" : "") .
-         ($has_availability ? ", is_available" : "") .
-         " FROM menu WHERE shop_id=? ORDER BY item_name ASC";
+// Filters
+$status_filter = $_GET['status'] ?? 'all';
+$date_from     = $_GET['date_from'] ?? '';
+$date_to       = $_GET['date_to'] ?? '';
+$search_query  = $_GET['search'] ?? '';
+
+// Build query
+$query = "SELECT o.order_id, o.table_no, o.total, o.token, o.status, o.created_at,
+                 COUNT(oi.order_item_id) as item_count,
+                 GROUP_CONCAT(CONCAT(oi.quantity, '× ', oi.item_name) SEPARATOR ', ') as item_summary
+          FROM orders o
+          LEFT JOIN order_item oi ON oi.order_id = o.order_id
+          WHERE o.shop_id = ?";
+
+$params = [$shop_id];
+$types  = "i";
+
+if ($status_filter !== 'all') {
+    $query .= " AND o.status = ?";
+    $params[] = $status_filter;
+    $types   .= "s";
+}
+
+if ($date_from) {
+    $query .= " AND DATE(o.created_at) >= ?";
+    $params[] = $date_from;
+    $types   .= "s";
+}
+
+if ($date_to) {
+    $query .= " AND DATE(o.created_at) <= ?";
+    $params[] = $date_to;
+    $types   .= "s";
+}
+
+if ($search_query) {
+    $query .= " AND (o.order_id LIKE ? OR o.table_no LIKE ? OR o.token LIKE ? OR oi.item_name LIKE ?)";
+    $search_param = "%$search_query%";
+    $params[] = $search_param;
+    $params[] = $search_param;
+    $params[] = $search_param;
+    $params[] = $search_param;
+    $types   .= "ssss";
+}
+
+$query .= " GROUP BY o.order_id
+            ORDER BY o.created_at DESC
+            LIMIT 200";
 
 $stmt = $conn->prepare($query);
-$stmt->bind_param("i", $shop_id);
+$stmt->bind_param($types, ...$params);
 $stmt->execute();
-$result = $stmt->get_result();
-$menu_items = $result->fetch_all(MYSQLI_ASSOC);
+$orders = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
-/* ================= CATEGORY LIST ================= */
-$categories = [];
-if ($has_category) {
-    foreach ($menu_items as $i) {
-        if (!in_array($i['category'], $categories)) {
-            $categories[] = $i['category'];
-        }
+// Status counts
+$status_counts = ['pending' => 0, 'paid' => 0, 'completed' => 0, 'cancelled' => 0];
+foreach ($orders as $o) {
+    if (isset($status_counts[$o['status']])) {
+        $status_counts[$o['status']]++;
     }
-    sort($categories);
 }
+$total_orders = count($orders);
 ?>
-
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Menu Management - <?= htmlspecialchars($_SESSION['shop_name'] ?? 'Dashboard') ?></title>
+    <title>All Orders - <?= htmlspecialchars($_SESSION['shop_name'] ?? 'Dashboard') ?></title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
     <style>
-        /* === ALL YOUR ORIGINAL CSS PRESERVED EXACTLY === */
         :root {
             --primary: #7c3aed;
             --primary-light: #a78bfa;
@@ -453,7 +350,7 @@ if ($has_category) {
             font-weight: 500;
         }
 
-        /* Stats Cards */
+        /* Stats Grid */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -498,7 +395,6 @@ if ($has_category) {
             align-items: center;
             justify-content: center;
             font-size: 24px;
-            background: linear-gradient(135deg, var(--primary-light), var(--primary));
             color: white;
         }
 
@@ -553,11 +449,12 @@ if ($has_category) {
             color: var(--primary);
         }
 
-        /* Form Styles */
-        .form-grid {
+        /* Filter Form */
+        .filter-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 24px;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 0;
         }
 
         .form-group {
@@ -600,52 +497,6 @@ if ($has_category) {
             padding-right: 48px;
         }
 
-        /* Switch Toggle */
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 60px;
-            height: 32px;
-        }
-
-        .switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: var(--gray-300);
-            transition: var(--transition);
-            border-radius: 34px;
-        }
-
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 24px;
-            width: 24px;
-            left: 4px;
-            bottom: 4px;
-            background-color: white;
-            transition: var(--transition);
-            border-radius: 50%;
-        }
-
-        input:checked + .slider {
-            background-color: var(--success);
-        }
-
-        input:checked + .slider:before {
-            transform: translateX(28px);
-        }
-
         /* Buttons */
         .btn {
             display: inline-flex;
@@ -684,26 +535,6 @@ if ($has_category) {
             background: var(--gray-200);
         }
 
-        .btn-success {
-            background: linear-gradient(135deg, var(--success), var(--secondary-light));
-            color: white;
-        }
-
-        .btn-success:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
-        }
-
-        .btn-danger {
-            background: linear-gradient(135deg, var(--danger), #dc2626);
-            color: white;
-        }
-
-        .btn-danger:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 14px rgba(239, 68, 68, 0.3);
-        }
-
         .btn-sm {
             padding: 10px 18px;
             font-size: 14px;
@@ -722,18 +553,18 @@ if ($has_category) {
             border: 1px solid var(--gray-100);
         }
 
-        .menu-table {
+        .orders-table {
             width: 100%;
             border-collapse: separate;
             border-spacing: 0;
         }
 
-        .menu-table thead {
+        .orders-table thead {
             background: linear-gradient(135deg, var(--gray-50), var(--gray-100));
         }
 
-        .menu-table th {
-            padding: 20px;
+        .orders-table th {
+            padding: 16px;
             text-align: left;
             font-weight: 600;
             color: var(--gray-700);
@@ -743,87 +574,167 @@ if ($has_category) {
             border-bottom: 2px solid var(--gray-200);
         }
 
-        .menu-table tbody tr {
+        .orders-table tbody tr {
             transition: var(--transition);
             background: var(--light);
         }
 
-        .menu-table tbody tr:hover {
+        .orders-table tbody tr:hover {
             background: var(--gray-50);
             transform: translateY(-2px);
             box-shadow: var(--shadow-sm);
         }
 
-        .menu-table td {
-            padding: 20px;
+        .orders-table td {
+            padding: 16px;
             border-bottom: 1px solid var(--gray-100);
             vertical-align: middle;
         }
 
-        .item-name {
-            font-weight: 600;
-            color: var(--darker);
-            font-size: 16px;
+        .order-id {
+            font-weight: 700;
+            color: var(--primary);
+            font-size: 15px;
         }
 
-        .item-description {
+        .order-details {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .order-meta {
+            display: flex;
+            gap: 12px;
+            font-size: 13px;
             color: var(--gray-600);
-            font-size: 14px;
+        }
+
+        .order-meta i {
+            color: var(--primary);
+            width: 16px;
+        }
+
+        .order-items {
+            font-size: 13px;
+            color: var(--gray-600);
             margin-top: 4px;
             line-height: 1.5;
+            max-width: 300px;
         }
 
-        .item-category {
-            display: inline-block;
-            padding: 6px 12px;
-            background: var(--primary-light);
-            color: white;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .item-price {
+        .order-total {
             font-weight: 700;
-            font-size: 18px;
+            font-size: 16px;
             color: var(--darker);
         }
 
-        .availability-badge {
+        .status-badge {
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 14px;
+            padding: 8px 14px;
+            border-radius: 18px;
+            font-size: 13px;
             font-weight: 600;
         }
 
-        .available {
+        .status-pending {
+            background: var(--warning-light);
+            color: var(--warning);
+        }
+
+        .status-paid {
+            background: var(--info-light);
+            color: var(--info);
+        }
+
+        .status-completed {
             background: var(--success-light);
             color: var(--success);
         }
 
-        .unavailable {
+        .status-cancelled {
             background: var(--danger-light);
             color: var(--danger);
         }
 
-        .actions-cell {
-            white-space: nowrap;
-        }
-
-        .actions-group {
+        .order-date {
             display: flex;
-            gap: 10px;
+            flex-direction: column;
+            gap: 4px;
         }
 
-        /* Edit Form in Table */
-        .edit-form {
-            display: grid;
-            grid-template-columns: 2fr 1fr 120px 120px;
-            gap: 15px;
-            align-items: end;
+        .order-time {
+            font-size: 13px;
+            color: var(--gray-600);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .view-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: var(--transition);
+        }
+
+        .view-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        /* Status Select */
+        .status-select {
+            padding: 6px 10px;
+            border: 2px solid var(--gray-200);
+            border-radius: 6px;
+            background: white;
+            font-size: 13px;
+            cursor: pointer;
+            transition: var(--transition);
+            width: 100%;
+            margin-top: 8px;
+        }
+
+        .status-select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        /* Token/Table Display - NORMAL SIZE */
+        .token-display {
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+            color: var(--primary);
+            background: var(--gray-50);
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--gray-200);
+            font-size: 14px;
+            display: inline-block;
+        }
+
+        .table-display {
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+            color: var(--info);
+            background: var(--gray-50);
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--gray-200);
+            font-size: 14px;
+            display: inline-block;
         }
 
         /* Empty State */
@@ -936,9 +847,34 @@ if ($has_category) {
             color: var(--gray-700);
         }
 
+        /* Export Buttons */
+        .export-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .export-btn {
+            padding: 10px 20px;
+            border: 2px solid var(--primary);
+            background: white;
+            color: var(--primary);
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: var(--transition);
+        }
+
+        .export-btn:hover {
+            background: var(--primary);
+            color: white;
+        }
+
         /* Responsive */
         @media (max-width: 1200px) {
-            .edit-form {
+            .filter-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
         }
@@ -956,7 +892,7 @@ if ($has_category) {
             .mobile-toggle {
                 display: block;
             }
-            .edit-form {
+            .filter-grid {
                 grid-template-columns: 1fr;
             }
             .notification {
@@ -964,6 +900,15 @@ if ($has_category) {
                 right: 20px;
                 min-width: auto;
                 max-width: none;
+            }
+            .card-header {
+                flex-direction: column;
+                gap: 20px;
+                align-items: flex-start;
+            }
+            .export-buttons {
+                width: 100%;
+                justify-content: flex-start;
             }
         }
 
@@ -982,35 +927,36 @@ if ($has_category) {
             .card {
                 padding: 24px;
             }
-            .menu-table {
+            .orders-table {
                 display: block;
             }
-            .menu-table thead {
+            .orders-table thead {
                 display: none;
             }
-            .menu-table tbody tr {
+            .orders-table tbody tr {
                 display: block;
                 margin-bottom: 20px;
                 border: 1px solid var(--gray-200);
                 border-radius: var(--radius);
                 padding: 20px;
             }
-            .menu-table td {
+            .orders-table td {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
                 padding: 12px 0;
                 border-bottom: 1px solid var(--gray-100);
             }
-            .menu-table td:last-child {
+            .orders-table td:last-child {
                 border-bottom: none;
             }
-            .menu-table td::before {
+            .orders-table td::before {
                 content: attr(data-label);
                 font-weight: 600;
                 color: var(--gray-700);
                 font-size: 14px;
                 text-transform: uppercase;
+                margin-right: 10px;
             }
         }
 
@@ -1076,6 +1022,42 @@ if ($has_category) {
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin-top: 32px;
+            padding-top: 24px;
+            border-top: 1px solid var(--gray-200);
+        }
+
+        .page-btn {
+            padding: 10px 16px;
+            border: 1px solid var(--gray-300);
+            background: white;
+            color: var(--gray-700);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .page-btn:hover:not(.disabled) {
+            background: var(--gray-100);
+        }
+
+        .page-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .page-btn.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -1104,11 +1086,11 @@ if ($has_category) {
                 <i class="fas fa-tachometer-alt"></i>
                 <span class="nav-text">Dashboard</span>
             </a>
-            <a href="menu_management.php" class="nav-item active">
+            <a href="menu_management.php" class="nav-item">
                 <i class="fas fa-utensils"></i>
                 <span class="nav-text">Menu Management</span>
             </a>
-            <a href="orders.php" class="nav-item">
+            <a href="orders.php" class="nav-item active">
                 <i class="fas fa-clipboard-list"></i>
                 <span class="nav-text">All Orders</span>
             </a>
@@ -1148,204 +1130,224 @@ if ($has_category) {
         <!-- Top Bar -->
         <div class="top-bar">
             <div class="welcome-message">
-                <h1>Menu Management</h1>
-                <p>Manage your restaurant's menu items and categories</p>
+                <h1>All Orders</h1>
+                <p>View and manage all customer orders</p>
             </div>
         </div>
 
         <!-- Stats Cards -->
-        <?php
-        $total_items = count($menu_items);
-        $available_items = $has_availability ? array_filter($menu_items, fn($i) => $i['is_available'] ?? 0) : [];
-        $categories_count = count($categories);
-        $avg_price = $total_items > 0 ? array_sum(array_column($menu_items, 'price')) / $total_items : 0;
-        ?>
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="stat-icon">
-                    <i class="fas fa-utensils"></i>
+                <div class="stat-icon" style="background: linear-gradient(135deg, var(--primary), var(--primary-dark));">
+                    <i class="fas fa-receipt"></i>
                 </div>
                 <div class="stat-info">
-                    <h3><?= $total_items ?></h3>
-                    <p>Total Menu Items</p>
+                    <h3><?= $total_orders ?></h3>
+                    <p>Total Orders</p>
                 </div>
             </div>
+            
             <div class="stat-card">
-                <div class="stat-icon">
+                <div class="stat-icon" style="background: linear-gradient(135deg, var(--warning), #f97316);">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="stat-info">
+                    <h3><?= $status_counts['pending'] ?></h3>
+                    <p>Pending Orders</p>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon" style="background: linear-gradient(135deg, var(--info), #0ea5e9);">
                     <i class="fas fa-check-circle"></i>
                 </div>
                 <div class="stat-info">
-                    <h3><?= count($available_items) ?></h3>
-                    <p>Available Items</p>
+                    <h3><?= $status_counts['paid'] ?></h3>
+                    <p>Paid Orders</p>
                 </div>
             </div>
+            
             <div class="stat-card">
-                <div class="stat-icon">
-                    <i class="fas fa-tags"></i>
+                <div class="stat-icon" style="background: linear-gradient(135deg, var(--success), #059669);">
+                    <i class="fas fa-check-double"></i>
                 </div>
                 <div class="stat-info">
-                    <h3><?= $categories_count ?></h3>
-                    <p>Categories</p>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon">
-                    <i class="fas fa-rupee-sign"></i>
-                </div>
-                <div class="stat-info">
-                    <h3>₹<?= number_format($avg_price, 2) ?></h3>
-                    <p>Average Price</p>
+                    <h3><?= $status_counts['completed'] ?></h3>
+                    <p>Completed Orders</p>
                 </div>
             </div>
         </div>
 
-        <!-- Add New Item Card -->
+        <!-- Filters Card -->
         <div class="card">
             <div class="card-header">
                 <h2 class="card-title">
-                    <i class="fas fa-plus-circle"></i>
-                    Add New Menu Item
+                    <i class="fas fa-filter"></i> Filter Orders
                 </h2>
             </div>
             
-            <form method="post" id="addItemForm">
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label class="form-label">Item Name *</label>
-                        <input type="text" name="item_name" class="form-control" required 
-                               placeholder="Enter item name" autocomplete="off">
-                    </div>
-                    
-                    <?php if ($has_category): ?>
-                    <div class="form-group">
-                        <label class="form-label">Category</label>
-                        <input type="text" name="category" class="form-control" 
-                               placeholder="e.g., Starters, Main Course" list="categories" autocomplete="off">
-                        <datalist id="categories">
-                            <?php foreach ($categories as $cat): ?>
-                                <option value="<?= htmlspecialchars($cat) ?>">
-                            <?php endforeach; ?>
-                        </datalist>
-                    </div>
-                    <?php endif; ?>
-                    
-                    <div class="form-group">
-                        <label class="form-label">Price (₹) *</label>
-                        <input type="number" name="price" class="form-control" 
-                               step="0.01" min="1" required placeholder="0.00" autocomplete="off">
-                    </div>
-                    
-                    <?php if ($has_description): ?>
-                    <div class="form-group">
-                        <label class="form-label">Description</label>
-                        <input type="text" name="description" class="form-control" 
-                               placeholder="Brief description (optional)" autocomplete="off">
-                    </div>
-                    <?php endif; ?>
+            <form method="GET" id="filterForm" class="filter-grid">
+                <div class="form-group">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-control form-select">
+                        <option value="all" <?= $status_filter === 'all' ? 'selected' : '' ?>>All Status</option>
+                        <option value="pending" <?= $status_filter === 'pending' ? 'selected' : '' ?>>Pending</option>
+                        <option value="paid" <?= $status_filter === 'paid' ? 'selected' : '' ?>>Paid</option>
+                        <option value="completed" <?= $status_filter === 'completed' ? 'selected' : '' ?>>Completed</option>
+                        <option value="cancelled" <?= $status_filter === 'cancelled' ? 'selected' : '' ?>>Cancelled</option>
+                    </select>
                 </div>
                 
-                <?php if ($has_availability): ?>
-                <div class="form-group" style="margin-top: 24px;">
-                    <label class="form-label">Availability</label>
-                    <div style="display: flex; align-items: center; gap: 20px; margin-top: 8px;">
-                        <label class="switch">
-                            <input type="checkbox" name="is_available" checked>
-                            <span class="slider"></span>
-                        </label>
-                        <span style="color: var(--gray-600); font-weight: 500;">Available for ordering</span>
-                    </div>
+                <div class="form-group">
+                    <label class="form-label">From Date</label>
+                    <input type="date" name="date_from" class="form-control" value="<?= htmlspecialchars($date_from) ?>">
                 </div>
-                <?php endif; ?>
                 
-                <div style="margin-top: 32px;">
-                    <button type="submit" name="add_item" class="btn btn-primary" id="addItemBtn">
-                        <i class="fas fa-plus"></i> Add Menu Item
+                <div class="form-group">
+                    <label class="form-label">To Date</label>
+                    <input type="date" name="date_to" class="form-control" value="<?= htmlspecialchars($date_to) ?>">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Search</label>
+                    <input type="text" name="search" class="form-control" placeholder="Search by ID, Table, Token or Item..." value="<?= htmlspecialchars($search_query) ?>">
+                </div>
+                
+                <div class="form-group" style="display: flex; gap: 12px; align-items: flex-end;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">
+                        <i class="fas fa-search"></i> Apply Filters
                     </button>
-                    <button type="reset" class="btn btn-secondary" style="margin-left: 12px;">
-                        <i class="fas fa-redo"></i> Clear Form
+                    <button type="button" onclick="resetFilters()" class="btn btn-secondary" style="flex: 1;">
+                        <i class="fas fa-redo"></i> Reset
                     </button>
                 </div>
             </form>
         </div>
 
-        <!-- Menu Items Card -->
+        <!-- Orders Table -->
         <div class="card">
-            <div class="card-header">
-                <h2 class="card-title">
-                    <i class="fas fa-list"></i>
-                    Menu Items (<?= $total_items ?>)
-                </h2>
-            </div>
-
-            <?php if (empty($menu_items)): ?>
+            <?php if (empty($orders)): ?>
                 <div class="empty-state">
-                    <div class="empty-icon">
-                        <i class="fas fa-utensils"></i>
-                    </div>
-                    <h3 class="empty-title">No menu items yet</h3>
-                    <p class="empty-subtitle">Start by adding your first menu item using the form above.</p>
+                    <div class="empty-icon"><i class="fas fa-receipt"></i></div>
+                    <h3>No orders found</h3>
+                    <p>Try adjusting filters or wait for new orders.</p>
                 </div>
             <?php else: ?>
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <i class="fas fa-list-ul"></i> Recent Orders (<?= $total_orders ?>)
+                    </h2>
+                    <div class="export-buttons">
+                        <button onclick="exportOrders('csv')" class="export-btn">
+                            <i class="fas fa-file-csv"></i> Export CSV
+                        </button>
+                        <button onclick="exportOrders('pdf')" class="export-btn">
+                            <i class="fas fa-file-pdf"></i> Export PDF
+                        </button>
+                    </div>
+                </div>
+                
                 <div class="table-container">
-                    <table class="menu-table">
+                    <table class="orders-table">
                         <thead>
                             <tr>
-                                <th>Item</th>
-                                <?php if ($has_category): ?><th>Category</th><?php endif; ?>
-                                <th>Price</th>
-                                <?php if ($has_availability): ?><th>Status</th><?php endif; ?>
+                                <th>Order ID</th>
+                                <th>Token / Table</th>
+                                <th>Items</th>
+                                <th>Total</th>
+                                <th>Status</th>
+                                <th>Date & Time</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($menu_items as $item): ?>
+                            <?php foreach ($orders as $order): ?>
                                 <tr>
-                                    <td data-label="Item">
-                                        <div class="item-name"><?= htmlspecialchars($item['item_name']) ?></div>
-                                        <?php if ($has_description && !empty($item['description'])): ?>
-                                            <div class="item-description"><?= htmlspecialchars($item['description']) ?></div>
+                                    <td data-label="Order ID">
+                                        <strong class="order-id">#<?= $order['order_id'] ?></strong>
+                                    </td>
+
+                                    <!-- NORMAL SIZE Token/Table Display -->
+                                    <td data-label="Token / Table">
+                                        <?php if (!empty($order['token']) && $order['token'] !== '0'): ?>
+                                            <div class="token-display">
+                                                Token: <?= htmlspecialchars($order['token']) ?>
+                                            </div>
+                                        <?php elseif (!empty($order['table_no'])): ?>
+                                            <div class="table-display">
+                                                Table: <?= htmlspecialchars($order['table_no']) ?>
+                                            </div>
+                                        <?php else: ?>
+                                            <span style="color: var(--gray-400);">—</span>
                                         <?php endif; ?>
                                     </td>
-                                    <?php if ($has_category): ?>
-                                    <td data-label="Category">
-                                        <span class="item-category"><?= htmlspecialchars($item['category'] ?? 'General') ?></span>
+
+                                    <td data-label="Items">
+                                        <div style="font-weight: 600; margin-bottom: 4px;">
+                                            <?= $order['item_count'] ?> item(s)
+                                        </div>
+                                        <div class="order-items">
+                                            <?= htmlspecialchars(substr($order['item_summary'] ?? '', 0, 50)) ?>
+                                            <?= strlen($order['item_summary'] ?? '') > 50 ? '...' : '' ?>
+                                        </div>
                                     </td>
-                                    <?php endif; ?>
-                                    <td data-label="Price">
-                                        <span class="item-price">₹<?= number_format($item['price'], 2) ?></span>
+
+                                    <td data-label="Total">
+                                        <strong class="order-total">₹<?= number_format($order['total'], 2) ?></strong>
                                     </td>
-                                    <?php if ($has_availability): ?>
+
                                     <td data-label="Status">
-                                        <form method="post" style="display: inline;">
-                                            <input type="hidden" name="item_id" value="<?= $item['id'] ?>">
-                                            <input type="hidden" name="current_status" value="<?= $item['is_available'] ?? 0 ?>">
-                                            <button type="submit" name="toggle_availability" class="availability-badge <?= ($item['is_available'] ?? 0) ? 'available' : 'unavailable' ?>">
-                                                <i class="fas fa-<?= ($item['is_available'] ?? 0) ? 'check' : 'times' ?>"></i>
-                                                <?= ($item['is_available'] ?? 0) ? 'Available' : 'Unavailable' ?>
-                                            </button>
+                                        <span class="status-badge status-<?= strtolower($order['status']) ?>">
+                                            <i class="fas fa-<?= 
+                                                $order['status'] === 'pending' ? 'clock' : 
+                                                ($order['status'] === 'paid' ? 'check-circle' : 
+                                                ($order['status'] === 'completed' ? 'check-double' : 'times-circle')) 
+                                            ?>"></i>
+                                            <?= ucfirst($order['status']) ?>
+                                        </span>
+                                        <form method="POST" onsubmit="updateStatus(event, this)" style="margin-top: 8px;">
+                                            <input type="hidden" name="order_id" value="<?= $order['order_id'] ?>">
+                                            <input type="hidden" name="update_status" value="1">
+                                            <select name="new_status" class="status-select" onchange="this.form.submit()">
+                                                <option value="pending" <?= $order['status'] === 'pending' ? 'selected' : '' ?>>Pending</option>
+                                                <option value="paid" <?= $order['status'] === 'paid' ? 'selected' : '' ?>>Paid</option>
+                                                <option value="completed" <?= $order['status'] === 'completed' ? 'selected' : '' ?>>Completed</option>
+                                                <option value="cancelled" <?= $order['status'] === 'cancelled' ? 'selected' : '' ?>>Cancelled</option>
+                                            </select>
                                         </form>
                                     </td>
-                                    <?php endif; ?>
-                                    <td data-label="Actions" class="actions-cell">
-                                        <div class="actions-group">
-                                            <button type="button" class="btn btn-success btn-xs" onclick="editItem(<?= $item['id'] ?>)">
-                                                <i class="fas fa-edit"></i> Edit
-                                            </button>
-                                            <form method="post" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this item?');">
-                                                <input type="hidden" name="item_id" value="<?= $item['id'] ?>">
-                                                <button type="submit" name="delete_item" class="btn btn-danger btn-xs">
-                                                    <i class="fas fa-trash"></i> Delete
-                                                </button>
-                                            </form>
-                                        </div>
+
+                                    <td data-label="Date & Time" class="order-date">
+                                        <?= date('d M Y', strtotime($order['created_at'])) ?><br>
+                                        <small class="order-time"><?= date('h:i A', strtotime($order['created_at'])) ?></small>
+                                    </td>
+
+                                    <td data-label="Actions">
+                                        <button class="btn btn-primary btn-xs" onclick="viewOrderDetails(<?= $order['order_id'] ?>)">
+                                            <i class="fas fa-eye"></i> View
+                                        </button>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
                     </table>
                 </div>
+                
+                <!-- Simple Pagination -->
+                <div class="pagination">
+                    <button class="page-btn" onclick="location.href='?page=1'">
+                        <i class="fas fa-angle-double-left"></i>
+                    </button>
+                    <button class="page-btn active">1</button>
+                    <button class="page-btn">2</button>
+                    <button class="page-btn">3</button>
+                    <button class="page-btn">
+                        <i class="fas fa-angle-double-right"></i>
+                    </button>
+                </div>
             <?php endif; ?>
         </div>
+
     </main>
 </div>
 
@@ -1353,7 +1355,7 @@ if ($has_category) {
 <div id="notificationContainer"></div>
 
 <script>
-// === ALL YOUR ORIGINAL JAVASCRIPT PRESERVED AND FIXED ===
+// Sidebar Toggle
 const sidebar = document.getElementById('sidebar');
 const sidebarToggle = document.getElementById('sidebarToggle');
 const mainContent = document.getElementById('mainContent');
@@ -1396,8 +1398,10 @@ updateSidebar();
 // Notification System
 function showNotification(message, type = 'success') {
     const container = document.getElementById('notificationContainer');
+    
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
+    
     const icon = type === 'success' ? 'check-circle' : 'exclamation-circle';
     
     notification.innerHTML = `
@@ -1414,8 +1418,11 @@ function showNotification(message, type = 'success') {
     `;
     
     container.appendChild(notification);
+    
+    // Show notification with animation
     setTimeout(() => notification.classList.add('show'), 10);
     
+    // Auto remove after 5 seconds
     setTimeout(() => {
         if (notification.parentElement) {
             notification.classList.remove('show');
@@ -1424,59 +1431,181 @@ function showNotification(message, type = 'success') {
     }, 5000);
 }
 
+// Show notification if there's a message from PHP
 <?php if (!empty($message)): ?>
-setTimeout(() => {
-    showNotification("<?= addslashes($message) ?>", "<?= $message_type ?>");
-}, 500);
+    setTimeout(() => {
+        showNotification('<?= addslashes($message) ?>', '<?= $message_type ?>');
+    }, 500);
 <?php endif; ?>
 
-
-// Edit item (safe escaping)
-function editItem(itemId) {
-    const row = document.querySelector(`tr:has(button[onclick="editItem(${itemId})"])`) ||
-                [...document.querySelectorAll('tr')].find(r => r.innerHTML.includes(`editItem(${itemId})`));
-    if (!row) return;
-
-    const nameCell = row.querySelector('.item-name');
-    const descCell = row.querySelector('.item-description');
-    const catCell = row.querySelector('.item-category');
-    const priceCell = row.querySelector('.item-price');
-    const availBadge = row.querySelector('.availability-badge');
-
-    const itemName = nameCell?.textContent.trim() || '';
-    const description = descCell?.textContent.trim() || '';
-    const category = catCell?.textContent.trim() || 'General';
-    const price = priceCell?.textContent.replace(/[^0-9.]/g, '') || '0';
-    const isAvailable = availBadge?.classList.contains('available');
-
-    row.innerHTML = `
-        <td colspan="${row.cells.length}">
-            <form method="post" class="edit-form">
-                <input type="hidden" name="item_id" value="${itemId}">
-                <input type="text" name="item_name" class="form-control" value="${itemName.replace(/"/g, '&quot;')}" required>
-                ${'<?php echo $has_category ?>' ? `<input type="text" name="category" class="form-control" value="${category.replace(/"/g, '&quot;')}">` : ''}
-                <input type="number" name="price" class="form-control" value="${price}" step="0.01" min="1" required>
-                ${'<?php echo $has_description ?>' ? `<input type="text" name="description" class="form-control" value="${description.replace(/"/g, '&quot;')}">` : ''}
-                ${'<?php echo $has_availability ?>' ? `
-                <div>
-                    <label class="switch" style="margin-top:8px">
-                        <input type="checkbox" name="is_available" ${isAvailable ? 'checked' : ''}>
-                        <span class="slider"></span>
-                    </label>
-                </div>` : ''}
-                <div style="grid-column:1/-1;display:flex;gap:10px;margin-top:15px;">
-                    <button type="submit" name="edit_item" class="btn btn-success btn-sm">
-                        <i class="fas fa-save"></i> Save
-                    </button>
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="location.reload()">
-                        <i class="fas fa-times"></i> Cancel
-                    </button>
-                </div>
-            </form>
-        </td>
-    `;
+// Update status function
+function updateStatus(event, form) {
+    event.preventDefault();
+    
+    const formData = new FormData(form);
+    const orderId = formData.get('order_id');
+    const newStatus = formData.get('new_status');
+    
+    // Add loading state
+    const select = form.querySelector('select');
+    const originalValue = select.value;
+    select.disabled = true;
+    
+    fetch('', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.text())
+    .then(() => {
+        showNotification(`Order status updated to ${newStatus}`, 'success');
+        
+        // Reload the page after 1 second to show updated status
+        setTimeout(() => {
+            location.reload();
+        }, 1000);
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Failed to update status. Please try again.', 'error');
+        select.value = originalValue;
+    })
+    .finally(() => {
+        select.disabled = false;
+    });
 }
-</script>
 
+// View order details
+function viewOrderDetails(orderId) {
+    // In a real application, this would open a modal or navigate to order details page
+    showNotification(`Opening order #${orderId} details...`, 'info');
+    
+    // Simulate API call
+    setTimeout(() => {
+        // For now, just show a message
+        showNotification(`Viewing details for order #${orderId}`, 'info');
+        // You can redirect to a detailed view page:
+        // window.location.href = `order_details.php?id=${orderId}`;
+    }, 500);
+}
+
+// Export orders
+function exportOrders(format) {
+    showNotification(`Exporting orders as ${format.toUpperCase()}...`, 'info');
+    
+    // Build export URL with current filters
+    const form = document.getElementById('filterForm');
+    const formData = new FormData(form);
+    const params = new URLSearchParams(formData);
+    
+    // Simulate export
+    setTimeout(() => {
+        showNotification(`Orders exported successfully as ${format.toUpperCase()}`, 'success');
+        
+        // In a real application, this would trigger a download
+        if (format === 'csv') {
+            window.open(`export_csv.php?${params.toString()}`, '_blank');
+        } else if (format === 'pdf') {
+            window.open(`export_pdf.php?${params.toString()}`, '_blank');
+        }
+    }, 1500);
+}
+
+// Reset filters
+function resetFilters() {
+    const form = document.getElementById('filterForm');
+    form.reset();
+    // Set default dates
+    const today = new Date().toISOString().split('T')[0];
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const dateFrom = thirtyDaysAgo.toISOString().split('T')[0];
+    
+    form.querySelector('input[name="date_from"]').value = dateFrom;
+    form.querySelector('input[name="date_to"]').value = today;
+    form.submit();
+}
+
+// Auto-refresh orders every 30 seconds
+let refreshInterval = setInterval(() => {
+    const currentParams = new URLSearchParams(window.location.search);
+    currentParams.set('refresh', 'true');
+    
+    fetch(`?${currentParams.toString()}`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.text())
+    .then(html => {
+        // Check if we have any pending orders
+        if (html.includes('status-pending')) {
+            const pendingCount = (html.match(/status-pending/g) || []).length;
+            if (pendingCount > 0 && !document.hidden) {
+                showNotification(`You have ${pendingCount} pending order(s)`, 'info');
+            }
+        }
+    })
+    .catch(() => {
+        // Silent fail for auto-refresh
+    });
+}, 30000);
+
+// Stop auto-refresh when tab is not active
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        clearInterval(refreshInterval);
+    } else {
+        refreshInterval = setInterval(() => {
+            // Refresh logic here
+        }, 30000);
+    }
+});
+
+// Search functionality
+const searchInput = document.querySelector('input[name="search"]');
+let searchTimeout;
+searchInput.addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        if (this.value.length >= 2 || this.value.length === 0) {
+            document.getElementById('filterForm').submit();
+        }
+    }, 500);
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    // Ctrl/Cmd + F to focus search
+    if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault();
+        searchInput.focus();
+    }
+    
+    // Escape to close sidebar on mobile
+    if (e.key === 'Escape' && window.innerWidth <= 992) {
+        sidebar.classList.remove('active');
+    }
+});
+
+// Initialize date pickers with sensible defaults
+document.addEventListener('DOMContentLoaded', function() {
+    const dateInputs = document.querySelectorAll('input[type="date"]');
+    dateInputs.forEach(input => {
+        if (!input.value && input.name === 'date_from') {
+            // Default to 30 days ago
+            const date = new Date();
+            date.setDate(date.getDate() - 30);
+            input.value = date.toISOString().split('T')[0];
+        }
+        if (!input.value && input.name === 'date_to') {
+            // Default to today
+            input.value = new Date().toISOString().split('T')[0];
+        }
+    });
+});
+</script>
 </body>
 </html>

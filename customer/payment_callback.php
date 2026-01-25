@@ -24,44 +24,58 @@ $table_no = $order['table_no'];
    TOKEN GENERATION
    ========================= */
 
-$q = mysqli_query(
-  $conn,
-  "SELECT token FROM orders
-   WHERE shop_id = $shop_id
-   AND token IS NOT NULL
-   ORDER BY order_id DESC
-   LIMIT 1"
-);
+// Start transaction to prevent race conditions
+mysqli_begin_transaction($conn);
 
-if (!$q) {
-  die("Token query error: " . mysqli_error($conn));
-}
+try {
+  // Lock the latest token for this shop
+  $q = mysqli_query(
+    $conn,
+    "SELECT token FROM orders
+     WHERE shop_id = $shop_id
+     AND token IS NOT NULL
+     ORDER BY order_id DESC
+     LIMIT 1 FOR UPDATE"
+  );
 
-if (mysqli_num_rows($q) > 0) {
-  $last_token = mysqli_fetch_assoc($q)['token'];
-  $token_number = intval($last_token) + 1;
-} else {
-  $token_number = 1; // FIRST ORDER FOR THIS SHOP
-}
+  if (!$q) {
+    throw new Exception("Token query error: " . mysqli_error($conn));
+  }
 
-$order_token = str_pad($token_number, 2, "0", STR_PAD_LEFT);
+  if (mysqli_num_rows($q) > 0) {
+    $last_token = mysqli_fetch_assoc($q)['token'];
+    $token_number = intval($last_token) + 1;
+  } else {
+    $token_number = 1; // FIRST ORDER FOR THIS SHOP
+  }
 
-/* =========================
-   UPDATE ORDER TO PAID
-   ========================= */
+  $order_token = str_pad($token_number, 2, "0", STR_PAD_LEFT);
 
-$update_sql = "UPDATE orders 
-               SET token = '$order_token', 
-                   status = 'paid' 
-               WHERE order_id = $order_id 
-               AND shop_id = $shop_id";
+  /* =========================
+     UPDATE ORDER TO PAID
+     ========================= */
 
-if (!mysqli_query($conn, $update_sql)) {
-  die("Order update error: " . mysqli_error($conn));
-}
+  $update_sql = "UPDATE orders
+                 SET token = '$order_token',
+                     status = 'paid'
+                 WHERE order_id = $order_id
+                 AND shop_id = $shop_id";
 
-if (mysqli_affected_rows($conn) === 0) {
-  die("No order found to update");
+  if (!mysqli_query($conn, $update_sql)) {
+    throw new Exception("Order update error: " . mysqli_error($conn));
+  }
+
+  if (mysqli_affected_rows($conn) === 0) {
+    throw new Exception("No order found to update");
+  }
+
+  // Commit the transaction
+  mysqli_commit($conn);
+
+} catch (Exception $e) {
+  // Rollback on error
+  mysqli_rollback($conn);
+  die($e->getMessage());
 }
 
 /* =========================
