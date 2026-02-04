@@ -1,12 +1,7 @@
 <?php
-// menu_management.php
+// menu.php
 session_start();
 include "../config/db.php";
-
-/* ================= DEBUG (REMOVE IN PRODUCTION) ================= */
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-/* =============================================================== */
 
 if (!isset($_SESSION['shop_id']) || !isset($_SESSION['logged_in'])) {
     header("Location: login.php");
@@ -14,70 +9,30 @@ if (!isset($_SESSION['shop_id']) || !isset($_SESSION['logged_in'])) {
 }
 
 $shop_id = (int)$_SESSION['shop_id'];
+$shop_name = $_SESSION['shop_name'] ?? 'My Shop';
 $message = '';
 $message_type = '';
 
-/* ========= SAFE COLUMN CHECK FUNCTION ========= */
-function columnExists($conn, $column) {
-    $res = mysqli_query($conn, "SHOW COLUMNS FROM menu LIKE '$column'");
-    return $res && mysqli_num_rows($res) > 0;
-}
-
-$has_description  = columnExists($conn, 'description');
-$has_category     = columnExists($conn, 'category');
-$has_availability = columnExists($conn, 'is_available');
-
 /* ================= FORM HANDLING ================= */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-
+    
     /* -------- ADD ITEM -------- */
     if (isset($_POST['add_item'])) {
-
         $item_name = trim($_POST['item_name'] ?? '');
-        $price     = floatval($_POST['price'] ?? 0);
-        $description = $has_description ? trim($_POST['description'] ?? '') : '';
-        $category    = $has_category ? trim($_POST['category'] ?? 'General') : 'General';
-        $is_available = $has_availability ? (isset($_POST['is_available']) ? 1 : 0) : 0;
+        $price = floatval($_POST['price'] ?? 0);
 
         if ($item_name === '' || $price <= 0) {
             $message = "Item name and valid price are required";
             $message_type = "error";
         } else {
-
-            if ($has_description && $has_category && $has_availability) {
-                $stmt = $conn->prepare(
-                    "INSERT INTO menu (shop_id, item_name, description, category, price, is_available)
-                     VALUES (?, ?, ?, ?, ?, ?)"
-                );
-                $stmt->bind_param("isssdi", $shop_id, $item_name, $description, $category, $price, $is_available);
-
-            } elseif ($has_description && $has_category) {
-                $stmt = $conn->prepare(
-                    "INSERT INTO menu (shop_id, item_name, description, category, price)
-                     VALUES (?, ?, ?, ?, ?)"
-                );
-                $stmt->bind_param("isssd", $shop_id, $item_name, $description, $category, $price);
-
-            } elseif ($has_category) {
-                $stmt = $conn->prepare(
-                    "INSERT INTO menu (shop_id, item_name, category, price)
-                     VALUES (?, ?, ?, ?)"
-                );
-                $stmt->bind_param("issd", $shop_id, $item_name, $category, $price);
-
-            } else {
-                $stmt = $conn->prepare(
-                    "INSERT INTO menu (shop_id, item_name, price)
-                     VALUES (?, ?, ?)"
-                );
-                $stmt->bind_param("isd", $shop_id, $item_name, $price);
-            }
+            $stmt = $conn->prepare("INSERT INTO menu (shop_id, item_name, price) VALUES (?, ?, ?)");
+            $stmt->bind_param("isd", $shop_id, $item_name, $price);
 
             if ($stmt->execute()) {
                 $message = "Item added successfully!";
                 $message_type = "success";
             } else {
-                $message = "DB Error: " . $stmt->error;
+                $message = "Error: " . $stmt->error;
                 $message_type = "error";
             }
             $stmt->close();
@@ -86,51 +41,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     /* -------- EDIT ITEM -------- */
     elseif (isset($_POST['edit_item'])) {
-
         $item_id = (int)$_POST['item_id'];
         $item_name = trim($_POST['item_name'] ?? '');
         $price = floatval($_POST['price'] ?? 0);
-        $description = $has_description ? trim($_POST['description'] ?? '') : '';
-        $category = $has_category ? trim($_POST['category'] ?? 'General') : 'General';
-        $is_available = $has_availability ? (isset($_POST['is_available']) ? 1 : 0) : 0;
 
         if ($item_id <= 0 || $item_name === '' || $price <= 0) {
             $message = "Invalid update data";
             $message_type = "error";
         } else {
-
-            if ($has_description && $has_category && $has_availability) {
-                $stmt = $conn->prepare(
-                    "UPDATE menu 
-                     SET item_name=?, description=?, category=?, price=?, is_available=? 
-                     WHERE id=? AND shop_id=?"
-                );
-                $stmt->bind_param("sssdiii", $item_name, $description, $category, $price, $is_available, $item_id, $shop_id);
-
-            } elseif ($has_description && $has_category) {
-                $stmt = $conn->prepare(
-                    "UPDATE menu 
-                     SET item_name=?, description=?, category=?, price=? 
-                     WHERE id=? AND shop_id=?"
-                );
-                $stmt->bind_param("sssdii", $item_name, $description, $category, $price, $item_id, $shop_id);
-
-            } elseif ($has_category) {
-                $stmt = $conn->prepare(
-                    "UPDATE menu 
-                     SET item_name=?, category=?, price=? 
-                     WHERE id=? AND shop_id=?"
-                );
-                $stmt->bind_param("ssdii", $item_name, $category, $price, $item_id, $shop_id);
-
-            } else {
-                $stmt = $conn->prepare(
-                    "UPDATE menu 
-                     SET item_name=?, price=? 
-                     WHERE id=? AND shop_id=?"
-                );
-                $stmt->bind_param("sdii", $item_name, $price, $item_id, $shop_id);
-            }
+            $stmt = $conn->prepare("UPDATE menu SET item_name=?, price=? WHERE id=? AND shop_id=?");
+            $stmt->bind_param("sdii", $item_name, $price, $item_id, $shop_id);
 
             if ($stmt->execute()) {
                 $message = "Item updated successfully!";
@@ -148,1335 +68,852 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $item_id = (int)$_POST['item_id'];
         $stmt = $conn->prepare("DELETE FROM menu WHERE id=? AND shop_id=?");
         $stmt->bind_param("ii", $item_id, $shop_id);
-        $stmt->execute();
+        
+        if ($stmt->execute()) {
+            $message = "Item deleted successfully!";
+            $message_type = "success";
+        } else {
+            $message = "Delete error: " . $stmt->error;
+            $message_type = "error";
+        }
         $stmt->close();
-
-        $message = "Item deleted successfully!";
-        $message_type = "success";
-    }
-
-    /* -------- TOGGLE AVAILABILITY -------- */
-    elseif (isset($_POST['toggle_availability']) && $has_availability) {
-        $item_id = (int)$_POST['item_id'];
-        $current = (int)$_POST['current_status'];
-        $new = $current ? 0 : 1;
-
-        $stmt = $conn->prepare(
-            "UPDATE menu SET is_available=? WHERE id=? AND shop_id=?"
-        );
-        $stmt->bind_param("iii", $new, $item_id, $shop_id);
-        $stmt->execute();
-        $stmt->close();
-
-        $message = "Availability updated!";
-        $message_type = "success";
     }
 }
 
 /* ================= LOAD MENU ITEMS ================= */
-$query = "SELECT id, item_name, price" .
-         ($has_description ? ", description" : "") .
-         ($has_category ? ", category" : "") .
-         ($has_availability ? ", is_available" : "") .
-         " FROM menu WHERE shop_id=? ORDER BY item_name ASC";
-
-$stmt = $conn->prepare($query);
+$stmt = $conn->prepare("SELECT id, item_name, price FROM menu WHERE shop_id=? ORDER BY item_name ASC");
 $stmt->bind_param("i", $shop_id);
 $stmt->execute();
 $result = $stmt->get_result();
 $menu_items = $result->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
-/* ================= CATEGORY LIST ================= */
-$categories = [];
-if ($has_category) {
-    foreach ($menu_items as $i) {
-        if (!in_array($i['category'], $categories)) {
-            $categories[] = $i['category'];
-        }
-    }
-    sort($categories);
-}
+$total_items = count($menu_items);
+$avg_price = $total_items > 0 ? array_sum(array_column($menu_items, 'price')) / $total_items : 0;
 ?>
-
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Menu Management - <?= htmlspecialchars($_SESSION['shop_name'] ?? 'Dashboard') ?></title>
+    <title>Menu Management - <?= htmlspecialchars($shop_name) ?></title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
     <style>
-        /* === ALL YOUR ORIGINAL CSS PRESERVED EXACTLY === */
         :root {
-            --primary: #7c3aed;
-            --primary-light: #a78bfa;
-            --primary-dark: #6d28d9;
-            --secondary: #10b981;
-            --secondary-light: #34d399;
-            --dark: #1f2937;
-            --darker: #111827;
-            --gray-50: #f9fafb;
-            --gray-100: #f3f4f6;
-            --gray-200: #e5e7eb;
-            --gray-300: #d1d5db;
-            --gray-400: #9ca3af;
-            --gray-600: #4b5563;
-            --gray-700: #374151;
-            --light: #ffffff;
-            --success: #10b981;
-            --success-light: #d1fae5;
-            --warning: #f59e0b;
-            --warning-light: #fef3c7;
-            --info: #3b82f6;
-            --info-light: #dbeafe;
-            --danger: #ef4444;
-            --danger-light: #fee2e2;
-            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-            --radius: 12px;
-            --radius-lg: 16px;
-            --radius-xl: 20px;
-            --sidebar-width: 260px;
-            --sidebar-collapsed: 70px;
-            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --primary: #F97316;
+            --primary-light: #FB923C;
+            --primary-dark: #EA580C;
+            --secondary: #0F172A;
+            --surface: #FFFFFF;
+            --surface-hover: #FFF7ED;
+            --background: #F8FAFC;
+            --text: #1E293B;
+            --text-secondary: #64748B;
+            --border: #E2E8F0;
+            --success: #10B981;
+            --warning: #F59E0B;
+            --danger: #EF4444;
+            
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+            --shadow-orange: 0 10px 40px -10px rgba(249, 115, 22, 0.5);
+            
+            --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+            --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+            --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+            
+            --radius: 16px;
+            --sidebar-width: 280px;
+            --sidebar-collapsed: 80px;
         }
 
         * { margin:0; padding:0; box-sizing:border-box; }
+        
         body {
-            font-family: 'Inter', 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
-            color: var(--dark);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: linear-gradient(135deg, #F8FAFC 0%, #FFF7ED 100%);
+            color: var(--text);
             min-height: 100vh;
             overflow-x: hidden;
+            line-height: 1.5;
+        }
+
+        /* Animated Background */
+        .bg-shapes {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 0; overflow: hidden;
+        }
+        .shape {
+            position: absolute; border-radius: 50%; filter: blur(80px);
+            opacity: 0.4; animation: float 20s infinite ease-in-out;
+        }
+        .shape-1 {
+            width: 400px; height: 400px;
+            background: linear-gradient(135deg, rgba(249, 115, 22, 0.3), rgba(251, 146, 60, 0.1));
+            top: -100px; right: -100px;
+        }
+        .shape-2 {
+            width: 300px; height: 300px;
+            background: linear-gradient(135deg, rgba(255, 237, 213, 0.6), rgba(254, 215, 170, 0.2));
+            bottom: 10%; left: -50px; animation-delay: -5s;
+        }
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -30px) scale(1.1); }
+            66% { transform: translate(-20px, 20px) scale(0.9); }
         }
 
         .dashboard-container {
-            display: flex;
-            min-height: 100vh;
-            position: relative;
+            display: flex; min-height: 100vh;
+            position: relative; z-index: 1;
         }
 
-        /* Sidebar Styles */
+        /* Glassmorphism Sidebar */
         .sidebar {
             width: var(--sidebar-width);
-            background: linear-gradient(180deg, var(--darker) 0%, #1e1b4b 100%);
-            color: white;
-            position: fixed;
-            height: 100vh;
-            padding: 24px 16px;
-            display: flex;
-            flex-direction: column;
-            z-index: 100;
-            transition: var(--transition);
-            box-shadow: var(--shadow-xl);
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(20px);
+            color: white; position: fixed; height: 100vh;
+            padding: 24px 20px; display: flex; flex-direction: column;
+            z-index: 100; transition: all 0.4s var(--ease-expo);
+            border-right: 1px solid rgba(255,255,255,0.05);
+            box-shadow: 4px 0 24px rgba(0,0,0,0.1);
         }
-
-        .sidebar.collapsed { width: var(--sidebar-collapsed); }
+        .sidebar.collapsed { width: var(--sidebar-collapsed); padding: 24px 16px; }
         .sidebar.collapsed .logo-text,
         .sidebar.collapsed .nav-text,
-        .sidebar.collapsed .user-info { display: none; }
-        .sidebar.collapsed .user-actions { flex-direction: column; gap: 12px; }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 0 8px 24px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            margin-bottom: 24px;
-        }
-
-        .logo-icon {
-            width: 40px;
-            height: 40px;
-            background: linear-gradient(135deg, var(--primary), #a855f7);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-        }
-
-        .logo-text {
-            font-size: 1.5rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, #ffffff, #c7d2fe);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
+        .sidebar.collapsed .user-info { opacity: 0; transform: translateX(-10px); pointer-events: none; }
 
         .sidebar-toggle {
-            position: absolute;
-            right: -12px;
-            top: 24px;
-            width: 24px;
-            height: 24px;
-            background: var(--light);
-            border: 2px solid var(--primary);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            color: var(--primary);
-            font-size: 12px;
-            transition: var(--transition);
-            z-index: 101;
+            position: absolute; right: -12px; top: 32px;
+            width: 28px; height: 28px; background: var(--primary);
+            border: 3px solid var(--surface); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; color: white; font-size: 11px;
+            transition: all 0.3s var(--ease-spring); z-index: 101;
+            box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4);
+        }
+        .sidebar-toggle:hover { transform: scale(1.15) rotate(180deg); background: var(--primary-light); }
+
+        .logo {
+            display: flex; align-items: center; gap: 14px;
+            padding: 8px 4px 24px; margin-bottom: 24px; position: relative;
+        }
+        .logo::after {
+            content: ''; position: absolute; bottom: 0; left: 0; right: 0;
+            height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+        }
+        .logo-icon {
+            width: 44px; height: 44px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            border-radius: 12px; display: flex; align-items: center; justify-content: center;
+            font-size: 20px; flex-shrink: 0;
+            box-shadow: 0 8px 20px rgba(249, 115, 22, 0.3);
+            animation: iconPulse 3s infinite; position: relative; overflow: hidden;
+        }
+        .logo-icon::before {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(135deg, transparent, rgba(255,255,255,0.3));
+        }
+        @keyframes iconPulse {
+            0%, 100% { box-shadow: 0 8px 20px rgba(249, 115, 22, 0.3); transform: scale(1); }
+            50% { box-shadow: 0 12px 30px rgba(249, 115, 22, 0.5); transform: scale(1.02); }
+        }
+        .logo-text {
+            font-size: 1.5rem; font-weight: 800;
+            background: linear-gradient(135deg, #ffffff, #cbd5e1);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            transition: all 0.3s var(--ease-smooth); white-space: nowrap;
         }
 
-        .sidebar-toggle:hover {
-            transform: scale(1.1);
-            box-shadow: var(--shadow);
-        }
-
-        .nav-menu {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
+        .nav-menu { flex: 1; display: flex; flex-direction: column; gap: 6px; }
         .nav-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 14px 16px;
-            border-radius: 10px;
-            color: rgba(255, 255, 255, 0.8);
-            text-decoration: none;
-            transition: var(--transition);
+            display: flex; align-items: center; gap: 14px;
+            padding: 14px 16px; border-radius: 12px;
+            color: rgba(255,255,255,0.6); text-decoration: none;
+            transition: all 0.3s var(--ease-spring); position: relative;
+            font-weight: 500; font-size: 15px; overflow: hidden;
         }
-
-        .nav-item:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            transform: translateX(4px);
+        .nav-item::before {
+            content: ''; position: absolute; left: 0; top: 50%;
+            transform: translateY(-50%); width: 3px; height: 0;
+            background: var(--primary); border-radius: 0 4px 4px 0;
+            transition: height 0.3s var(--ease-spring);
         }
-
+        .nav-item:hover { color: white; background: rgba(255,255,255,0.05); transform: translateX(6px); }
+        .nav-item:hover::before { height: 60%; }
         .nav-item.active {
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: white;
-            box-shadow: var(--shadow);
+            background: linear-gradient(135deg, rgba(249, 115, 22, 0.2), rgba(249, 115, 22, 0.05));
+            color: var(--primary-light); font-weight: 600;
         }
+        .nav-item.active::before { height: 80%; }
+        .nav-item i { font-size: 18px; width: 24px; text-align: center; transition: transform 0.3s var(--ease-spring); }
+        .nav-item:hover i { transform: scale(1.1) rotate(-5deg); }
+        .nav-text { transition: all 0.3s var(--ease-smooth); white-space: nowrap; }
 
-        .nav-item i { font-size: 18px; width: 24px; text-align: center; }
-        .nav-text { font-weight: 500; font-size: 15px; }
-
-        .user-actions {
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            padding-top: 20px;
-            margin-top: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
+        .user-actions { margin-top: auto; padding-top: 20px; position: relative; }
+        .user-actions::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0;
+            height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
         }
-
-        .user-info { padding: 0 8px 16px; text-align: center; }
-
+        .user-info { padding: 0 8px 16px; text-align: center; transition: all 0.3s var(--ease-smooth); }
         .user-avatar {
-            width: 40px;
-            height: 40px;
-            background: linear-gradient(135deg, #8b5cf6, #ec4899);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-            margin: 0 auto 8px;
+            width: 48px; height: 48px;
+            background: linear-gradient(135deg, var(--primary), #fbbf24);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-weight: 800; font-size: 18px; margin: 0 auto 10px;
+            box-shadow: 0 4px 15px rgba(249, 115, 22, 0.3);
+            border: 3px solid rgba(255,255,255,0.1);
+            transition: all 0.3s var(--ease-spring); position: relative; overflow: hidden;
         }
-
-        .user-name { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
-        .user-role { font-size: 12px; color: rgba(255, 255, 255, 0.6); }
+        .user-avatar::after {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.2), transparent);
+        }
+        .user-avatar:hover { transform: scale(1.1) rotate(10deg); }
+        .user-name { font-weight: 700; font-size: 15px; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .user-role { font-size: 12px; color: rgba(255,255,255,0.4); font-weight: 500; }
 
         .action-btn {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 14px 16px;
-            border-radius: 10px;
-            background: transparent;
-            border: none;
-            color: rgba(255, 255, 255, 0.8);
-            font-family: inherit;
-            font-size: 15px;
-            cursor: pointer;
-            transition: var(--transition);
-            width: 100%;
-            text-align: left;
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px 16px; border-radius: 10px; background: transparent;
+            border: none; color: rgba(255,255,255,0.6); font-family: inherit;
+            font-size: 14px; cursor: pointer; transition: all 0.3s var(--ease-spring);
+            width: 100%; text-align: left; font-weight: 500; position: relative; overflow: hidden;
         }
-
-        .action-btn:hover { background: rgba(255, 255, 255, 0.1); color: white; }
-        .action-btn.logout { color: #fca5a5; }
-        .action-btn.logout:hover { background: rgba(239, 68, 68, 0.2); }
+        .action-btn::before {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            transform: translateX(-100%); transition: transform 0.5s;
+        }
+        .action-btn:hover::before { transform: translateX(100%); }
+        .action-btn:hover { color: white; background: rgba(255,255,255,0.08); transform: translateX(4px); }
+        .action-btn.logout { color: #fca5a5; margin-top: 4px; }
+        .action-btn.logout:hover { background: rgba(239, 68, 68, 0.15); color: #fecaca; }
 
         /* Main Content */
         .main-content {
-            flex: 1;
-            margin-left: var(--sidebar-width);
-            padding: 24px;
-            transition: var(--transition);
+            flex: 1; margin-left: var(--sidebar-width);
+            padding: 32px; transition: all 0.4s var(--ease-expo);
         }
-
         .main-content.expanded { margin-left: var(--sidebar-collapsed); }
 
         /* Top Bar */
         .top-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 32px;
-            background: var(--light);
-            padding: 24px 32px;
-            border-radius: var(--radius-xl);
-            box-shadow: var(--shadow);
-            border: 1px solid var(--gray-100);
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 32px; background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px); padding: 24px 32px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow), 0 0 0 1px rgba(255,255,255,0.5) inset;
+            border: 1px solid rgba(255,255,255,0.6);
+            animation: slideDown 0.6s var(--ease-expo) backwards;
         }
-
-        .welcome-message h1 {
-            font-size: 1.75rem;
-            font-weight: 700;
-            color: var(--darker);
-            margin-bottom: 8px;
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-
-        .welcome-message p {
-            color: var(--gray-600);
-            font-size: 15px;
-            font-weight: 500;
-        }
+        .welcome-message h1 { font-size: 1.75rem; font-weight: 800; color: var(--secondary); margin-bottom: 6px; letter-spacing: -0.02em; }
+        .welcome-message p { color: var(--text-secondary); font-size: 15px; font-weight: 500; }
 
         /* Stats Cards */
         .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 32px;
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px; margin-bottom: 32px;
         }
-
         .stat-card {
-            background: var(--light);
-            padding: 24px;
-            border-radius: var(--radius-xl);
-            box-shadow: var(--shadow);
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            transition: var(--transition);
-            border: 1px solid var(--gray-100);
-            position: relative;
-            overflow: hidden;
+            background: var(--surface); padding: 24px; border-radius: var(--radius);
+            box-shadow: var(--shadow); display: flex; align-items: center; gap: 16px;
+            border: 1px solid var(--border); transition: all 0.4s var(--ease-spring);
+            position: relative; overflow: hidden; animation: slideUp 0.6s var(--ease-expo) backwards;
         }
-
+        .stat-card:nth-child(1) { animation-delay: 0.1s; }
+        .stat-card:nth-child(2) { animation-delay: 0.2s; }
+        .stat-card:nth-child(3) { animation-delay: 0.3s; }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
         .stat-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 6px;
-            height: 100%;
-            background: linear-gradient(to bottom, var(--primary), var(--primary-dark));
+            content: ''; position: absolute; top: 0; left: 0; right: 0;
+            height: 4px; background: linear-gradient(90deg, var(--primary), var(--primary-light));
+            transform: scaleX(0); transition: transform 0.4s var(--ease-expo);
         }
-
-        .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: var(--shadow-lg);
-        }
-
+        .stat-card:hover { transform: translateY(-4px) scale(1.02); box-shadow: var(--shadow-xl), var(--shadow-orange); border-color: rgba(249, 115, 22, 0.3); }
+        .stat-card:hover::before { transform: scaleX(1); }
         .stat-icon {
-            width: 56px;
-            height: 56px;
-            border-radius: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            background: linear-gradient(135deg, var(--primary-light), var(--primary));
-            color: white;
+            width: 56px; height: 56px; border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px; transition: all 0.4s var(--ease-spring);
+            position: relative; overflow: hidden;
         }
-
+        .stat-card:hover .stat-icon { transform: scale(1.1) rotate(-5deg); }
+        .stat-icon::after {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.4), transparent);
+        }
+        .stat-icon.items { background: linear-gradient(135deg, #FEF3C7, #FDE68A); color: #D97706; box-shadow: 0 8px 20px rgba(217, 119, 6, 0.2); }
+        .stat-icon.price { background: linear-gradient(135deg, #FCE7F3, #FBCFE8); color: #DB2777; box-shadow: 0 8px 20px rgba(219, 39, 119, 0.2); }
+        
         .stat-info h3 {
-            font-size: 28px;
-            font-weight: 700;
-            color: var(--darker);
-            line-height: 1;
-            margin-bottom: 4px;
+            font-size: 32px; font-weight: 800; margin-bottom: 4px;
+            background: linear-gradient(135deg, var(--secondary), #475569);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1;
         }
-
-        .stat-info p {
-            color: var(--gray-600);
-            font-size: 14px;
-            font-weight: 500;
-        }
+        .stat-info p { color: var(--text-secondary); font-size: 14px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
 
         /* Cards */
         .card {
-            background: var(--light);
-            border-radius: var(--radius-xl);
-            box-shadow: var(--shadow);
-            padding: 32px;
-            margin-bottom: 32px;
-            border: 1px solid var(--gray-100);
-            transition: var(--transition);
+            background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(20px);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow), 0 0 0 1px rgba(255,255,255,0.6) inset;
+            padding: 32px; margin-bottom: 32px; border: 1px solid rgba(255,255,255,0.6);
+            transition: all 0.4s var(--ease-spring); animation: cardEnter 0.6s var(--ease-expo) backwards;
+            position: relative; overflow: hidden;
         }
-
-        .card:hover {
-            box-shadow: var(--shadow-lg);
+        .card:nth-of-type(1) { animation-delay: 0.4s; }
+        .card:nth-of-type(2) { animation-delay: 0.5s; }
+        @keyframes cardEnter {
+            from { opacity: 0; transform: translateY(40px) rotateX(10deg) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) rotateX(0) scale(1); }
         }
-
+        .card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0;
+            height: 4px; background: linear-gradient(90deg, var(--primary), var(--primary-light), var(--primary));
+            background-size: 200% 100%; animation: shimmer 3s infinite linear;
+        }
+        @keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+        .card:hover { transform: translateY(-4px); box-shadow: var(--shadow-xl), 0 20px 40px -10px rgba(249, 115, 22, 0.2); }
+        
         .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 32px;
-            padding-bottom: 20px;
-            border-bottom: 2px solid var(--gray-100);
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 32px; padding-bottom: 20px; border-bottom: 2px solid var(--border);
         }
-
-        .card-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--darker);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .card-title i {
-            color: var(--primary);
-        }
+        .card-title { font-size: 1.5rem; font-weight: 800; color: var(--secondary); display: flex; align-items: center; gap: 12px; }
+        .card-title i { color: var(--primary); animation: iconBounce 2s infinite; }
+        @keyframes iconBounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
 
         /* Form Styles */
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 24px;
-        }
-
-        .form-group {
-            margin-bottom: 0;
-        }
-
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px; }
+        .form-group { margin-bottom: 0; position: relative; }
         .form-label {
-            display: block;
-            margin-bottom: 10px;
-            font-weight: 600;
-            color: var(--gray-700);
-            font-size: 14px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            display: block; margin-bottom: 10px; font-weight: 700;
+            color: var(--text); font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;
         }
-
         .form-control {
-            width: 100%;
-            padding: 14px 18px;
-            border: 2px solid var(--gray-200);
-            border-radius: 12px;
-            font-size: 15px;
-            font-family: 'Inter', sans-serif;
-            transition: var(--transition);
-            background: var(--light);
+            width: 100%; padding: 14px 18px; border: 2px solid var(--border);
+            border-radius: 12px; font-size: 15px; font-family: 'Plus Jakarta Sans', sans-serif;
+            transition: all 0.3s var(--ease-spring); background: rgba(255,255,255,0.8);
         }
-
-        .form-control:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.1);
-        }
-
-        .form-select {
-            appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%234b5563' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 16px center;
-            background-size: 16px;
-            padding-right: 48px;
-        }
-
-        /* Switch Toggle */
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 60px;
-            height: 32px;
-        }
-
-        .switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: var(--gray-300);
-            transition: var(--transition);
-            border-radius: 34px;
-        }
-
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 24px;
-            width: 24px;
-            left: 4px;
-            bottom: 4px;
-            background-color: white;
-            transition: var(--transition);
-            border-radius: 50%;
-        }
-
-        input:checked + .slider {
-            background-color: var(--success);
-        }
-
-        input:checked + .slider:before {
-            transform: translateX(28px);
-        }
+        .form-control:hover { border-color: var(--primary-light); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(249, 115, 22, 0.1); }
+        .form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.1), 0 4px 12px rgba(249, 115, 22, 0.15); transform: translateY(-2px); }
 
         /* Buttons */
         .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            padding: 14px 28px;
-            border: none;
-            border-radius: 12px;
-            font-weight: 600;
-            font-size: 15px;
-            cursor: pointer;
-            transition: var(--transition);
-            font-family: 'Inter', sans-serif;
+            display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+            padding: 14px 28px; border: none; border-radius: 12px; font-weight: 700;
+            font-size: 15px; cursor: pointer; transition: all 0.3s var(--ease-spring);
+            font-family: 'Plus Jakarta Sans', sans-serif; position: relative; overflow: hidden;
         }
-
-        .btn i { font-size: 16px; }
-
+        .btn::before {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(135deg, transparent, rgba(255,255,255,0.3), transparent);
+            transform: translateX(-100%); transition: transform 0.6s;
+        }
+        .btn:hover::before { transform: translateX(100%); }
+        .btn i { font-size: 16px; transition: transform 0.3s var(--ease-spring); }
+        .btn:hover i { transform: scale(1.1) rotate(-5deg); }
+        
         .btn-primary {
             background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: white;
-            box-shadow: 0 4px 14px rgba(124, 58, 237, 0.3);
+            color: white; box-shadow: 0 4px 15px rgba(249, 115, 22, 0.3);
         }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
-        }
-
+        .btn-primary:hover { transform: translateY(-2px) scale(1.05); box-shadow: 0 8px 25px rgba(249, 115, 22, 0.4); }
         .btn-secondary {
-            background: var(--gray-100);
-            color: var(--gray-700);
+            background: linear-gradient(135deg, var(--background), var(--border));
+            color: var(--text-secondary); border: 2px solid var(--border);
         }
-
-        .btn-secondary:hover {
-            background: var(--gray-200);
-        }
-
+        .btn-secondary:hover { transform: translateY(-2px); border-color: var(--primary-light); color: var(--primary); }
         .btn-success {
-            background: linear-gradient(135deg, var(--success), var(--secondary-light));
-            color: white;
+            background: linear-gradient(135deg, var(--success), #059669);
+            color: white; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
         }
-
-        .btn-success:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
-        }
-
+        .btn-success:hover { transform: translateY(-2px) scale(1.05); box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4); }
         .btn-danger {
             background: linear-gradient(135deg, var(--danger), #dc2626);
-            color: white;
+            color: white; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
         }
-
-        .btn-danger:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 14px rgba(239, 68, 68, 0.3);
-        }
-
-        .btn-sm {
-            padding: 10px 18px;
-            font-size: 14px;
-        }
-
-        .btn-xs {
-            padding: 8px 16px;
-            font-size: 13px;
-            border-radius: 10px;
-        }
+        .btn-danger:hover { transform: translateY(-2px) scale(1.05); box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4); }
+        .btn-sm { padding: 10px 18px; font-size: 14px; }
+        .btn-xs { padding: 8px 16px; font-size: 13px; border-radius: 10px; }
 
         /* Table */
         .table-container {
-            overflow-x: auto;
-            border-radius: var(--radius-lg);
-            border: 1px solid var(--gray-100);
+            overflow-x: auto; border-radius: var(--radius);
+            border: 1px solid var(--border); background: rgba(255,255,255,0.5);
+            backdrop-filter: blur(10px);
         }
-
-        .menu-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-        }
-
+        .menu-table { width: 100%; border-collapse: separate; border-spacing: 0; }
         .menu-table thead {
-            background: linear-gradient(135deg, var(--gray-50), var(--gray-100));
+            background: linear-gradient(135deg, rgba(249, 115, 22, 0.1), rgba(251, 146, 60, 0.05));
         }
-
         .menu-table th {
-            padding: 20px;
-            text-align: left;
-            font-weight: 600;
-            color: var(--gray-700);
-            font-size: 14px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            border-bottom: 2px solid var(--gray-200);
+            padding: 20px; text-align: left; font-weight: 700; color: var(--secondary);
+            font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;
+            border-bottom: 2px solid var(--primary-light);
         }
-
         .menu-table tbody tr {
-            transition: var(--transition);
-            background: var(--light);
+            transition: all 0.3s var(--ease-spring); background: transparent;
+            border-bottom: 1px solid var(--border);
         }
-
         .menu-table tbody tr:hover {
-            background: var(--gray-50);
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-sm);
+            background: rgba(249, 115, 22, 0.05); transform: translateX(8px);
+            box-shadow: -4px 0 12px rgba(249, 115, 22, 0.1);
         }
-
-        .menu-table td {
-            padding: 20px;
-            border-bottom: 1px solid var(--gray-100);
-            vertical-align: middle;
-        }
-
-        .item-name {
-            font-weight: 600;
-            color: var(--darker);
-            font-size: 16px;
-        }
-
-        .item-description {
-            color: var(--gray-600);
-            font-size: 14px;
-            margin-top: 4px;
-            line-height: 1.5;
-        }
-
-        .item-category {
-            display: inline-block;
-            padding: 6px 12px;
-            background: var(--primary-light);
-            color: white;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
+        .menu-table td { padding: 20px; vertical-align: middle; }
+        
+        .item-name { font-weight: 700; color: var(--secondary); font-size: 16px; }
         .item-price {
-            font-weight: 700;
-            font-size: 18px;
-            color: var(--darker);
+            font-weight: 800; font-size: 18px; color: var(--primary-dark);
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         }
+        .actions-group { display: flex; gap: 10px; }
 
-        .availability-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: 600;
-        }
-
-        .available {
-            background: var(--success-light);
-            color: var(--success);
-        }
-
-        .unavailable {
-            background: var(--danger-light);
-            color: var(--danger);
-        }
-
-        .actions-cell {
-            white-space: nowrap;
-        }
-
-        .actions-group {
-            display: flex;
-            gap: 10px;
-        }
-
-        /* Edit Form in Table */
-        .edit-form {
-            display: grid;
-            grid-template-columns: 2fr 1fr 120px 120px;
-            gap: 15px;
-            align-items: end;
-        }
-
+        /* Edit Form */
+        .edit-form-row { background: rgba(249, 115, 22, 0.05) !important; }
+        .edit-form-row td { padding: 30px !important; }
+        .edit-form-row .form-grid { margin-bottom: 20px; }
+        
         /* Empty State */
-        .empty-state {
-            text-align: center;
-            padding: 80px 20px;
-            color: var(--gray-600);
-        }
-
+        .empty-state { text-align: center; padding: 80px 40px; color: var(--text-secondary); animation: float 6s ease-in-out infinite; }
         .empty-icon {
-            font-size: 4rem;
-            color: var(--gray-300);
-            margin-bottom: 24px;
-            opacity: 0.5;
+            font-size: 64px; margin-bottom: 24px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            animation: iconFloat 3s ease-in-out infinite;
         }
-
-        .empty-title {
-            font-size: 1.5rem;
-            color: var(--gray-700);
-            margin-bottom: 12px;
-            font-weight: 600;
-        }
-
-        .empty-subtitle {
-            color: var(--gray-600);
-            max-width: 400px;
-            margin: 0 auto;
-            line-height: 1.6;
-        }
+        @keyframes iconFloat { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-10px) rotate(5deg); } }
+        .empty-title { font-size: 1.5rem; color: var(--secondary); margin-bottom: 8px; font-weight: 800; }
+        .empty-subtitle { color: var(--text-secondary); font-size: 15px; font-weight: 500; }
 
         /* Notification */
         .notification {
-            position: fixed;
-            top: 30px;
-            right: 30px;
-            background: var(--light);
-            padding: 20px 24px;
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-lg);
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            z-index: 1000;
-            min-width: 350px;
-            max-width: 400px;
-            transform: translateX(120%);
-            transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
-            border-left: 5px solid var(--primary);
+            position: fixed; top: 24px; right: 24px;
+            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px);
+            padding: 20px 24px; border-radius: var(--radius);
+            box-shadow: var(--shadow-xl), 0 0 0 1px rgba(255,255,255,0.5) inset;
+            display: flex; align-items: center; gap: 16px; z-index: 1000;
+            min-width: 350px; max-width: 400px;
+            transform: translateX(120%) scale(0.9); transition: all 0.4s var(--ease-spring);
+            border-left: 4px solid var(--primary);
         }
-
-        .notification.show {
-            transform: translateX(0);
-        }
-
-        .notification.success {
-            border-left-color: var(--success);
-        }
-
-        .notification.error {
-            border-left-color: var(--danger);
-        }
-
+        .notification.show { transform: translateX(0) scale(1); }
+        .notification.success { border-left-color: var(--success); }
+        .notification.error { border-left-color: var(--danger); }
         .notification-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            flex-shrink: 0;
+            width: 44px; height: 44px; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px; flex-shrink: 0; animation: iconPop 0.4s var(--ease-spring);
         }
-
-        .notification.success .notification-icon {
-            background: var(--success-light);
-            color: var(--success);
-        }
-
-        .notification.error .notification-icon {
-            background: var(--danger-light);
-            color: var(--danger);
-        }
-
-        .notification-content {
-            flex: 1;
-        }
-
-        .notification-title {
-            font-weight: 600;
-            margin-bottom: 4px;
-            color: var(--darker);
-        }
-
-        .notification-message {
-            color: var(--gray-600);
-            font-size: 14px;
-            line-height: 1.5;
-        }
-
+        @keyframes iconPop { 0% { transform: scale(0) rotate(-45deg); } 100% { transform: scale(1) rotate(0deg); } }
+        .notification.success .notification-icon { background: linear-gradient(135deg, #D1FAE5, #A7F3D0); color: #059669; }
+        .notification.error .notification-icon { background: linear-gradient(135deg, #FEE2E2, #FECACA); color: #DC2626; }
+        .notification-content { flex: 1; }
+        .notification-title { font-weight: 800; margin-bottom: 4px; color: var(--secondary); }
+        .notification-message { color: var(--text-secondary); font-size: 14px; font-weight: 500; }
         .notification-close {
-            background: none;
-            border: none;
-            color: var(--gray-400);
-            cursor: pointer;
-            font-size: 18px;
-            transition: var(--transition);
+            background: none; border: none; color: var(--text-secondary);
+            cursor: pointer; font-size: 20px; width: 36px; height: 36px;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s var(--ease-spring);
         }
+        .notification-close:hover { background: var(--background); color: var(--text); transform: rotate(90deg); }
 
-        .notification-close:hover {
-            color: var(--gray-700);
+        /* Mobile */
+        .mobile-toggle {
+            display: none; position: fixed; top: 20px; left: 20px; z-index: 99;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white; border: none; width: 48px; height: 48px;
+            border-radius: 14px; font-size: 20px; cursor: pointer;
+            box-shadow: var(--shadow-lg), 0 0 0 1px rgba(255,255,255,0.3) inset;
+            transition: all 0.3s var(--ease-spring);
         }
-
-        /* Responsive */
-        @media (max-width: 1200px) {
-            .edit-form {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
+        .mobile-toggle:hover { transform: scale(1.1) rotate(5deg); }
 
         @media (max-width: 992px) {
-            .sidebar {
-                transform: translateX(-100%);
-            }
-            .sidebar.active {
-                transform: translateX(0);
-            }
-            .main-content {
-                margin-left: 0;
-            }
-            .mobile-toggle {
-                display: block;
-            }
-            .edit-form {
-                grid-template-columns: 1fr;
-            }
-            .notification {
-                left: 20px;
-                right: 20px;
-                min-width: auto;
-                max-width: none;
-            }
+            .sidebar { transform: translateX(-100%); box-shadow: 10px 0 40px rgba(0,0,0,0.2); }
+            .sidebar.active { transform: translateX(0); }
+            .main-content { margin-left: 0; padding: 20px; }
+            .mobile-toggle { display: flex; align-items: center; justify-content: center; }
+            .top-bar { margin-top: 60px; flex-direction: column; gap: 20px; text-align: center; }
+            .notification { left: 20px; right: 20px; min-width: auto; max-width: none; }
         }
-
         @media (max-width: 768px) {
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-            .top-bar {
-                flex-direction: column;
-                gap: 20px;
-                text-align: center;
-            }
-            .main-content {
-                padding: 16px;
-            }
-            .card {
-                padding: 24px;
-            }
-            .menu-table {
-                display: block;
-            }
-            .menu-table thead {
-                display: none;
-            }
+            .stats-grid { grid-template-columns: 1fr; }
+            .welcome-message h1 { font-size: 1.5rem; }
+            .card { padding: 24px; }
+            .form-grid { grid-template-columns: 1fr; }
+            .menu-table thead { display: none; }
             .menu-table tbody tr {
-                display: block;
-                margin-bottom: 20px;
-                border: 1px solid var(--gray-200);
-                border-radius: var(--radius);
-                padding: 20px;
+                display: block; margin-bottom: 20px;
+                border: 1px solid var(--border); border-radius: var(--radius);
+                padding: 20px; background: rgba(255,255,255,0.8);
             }
-            .menu-table td {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 12px 0;
-                border-bottom: 1px solid var(--gray-100);
-            }
-            .menu-table td:last-child {
-                border-bottom: none;
-            }
+            .menu-table td { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
+            .menu-table td:last-child { border-bottom: none; }
             .menu-table td::before {
-                content: attr(data-label);
-                font-weight: 600;
-                color: var(--gray-700);
-                font-size: 14px;
-                text-transform: uppercase;
+                content: attr(data-label); font-weight: 700; color: var(--secondary);
+                font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;
             }
         }
 
-        .mobile-toggle {
-            display: none;
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            z-index: 99;
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: white;
-            border: none;
-            width: 50px;
-            height: 50px;
-            border-radius: 12px;
-            font-size: 20px;
-            cursor: pointer;
-            box-shadow: var(--shadow-lg);
-            transition: var(--transition);
-        }
-
-        .mobile-toggle:hover {
-            transform: scale(1.05);
-        }
-
-        /* Animations */
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .stat-card, .card {
-            animation: slideIn 0.5s ease-out;
-        }
-
-        /* Loading State */
-        .loading {
-            position: relative;
-            pointer-events: none;
-            opacity: 0.7;
-        }
-
+        /* Loading */
+        .loading { position: relative; pointer-events: none; opacity: 0.7; }
         .loading::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 20px;
-            height: 20px;
-            margin: -10px 0 0 -10px;
-            border: 2px solid var(--gray-300);
-            border-top-color: var(--primary);
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
+            content: ''; position: absolute; top: 50%; left: 50%;
+            width: 24px; height: 24px; margin: -12px 0 0 -12px;
+            border: 3px solid var(--border); border-top-color: var(--primary);
+            border-radius: 50%; animation: spin 0.8s linear infinite;
         }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
+    <div class="bg-shapes">
+        <div class="shape shape-1"></div>
+        <div class="shape shape-2"></div>
+    </div>
 
-<div class="dashboard-container">
-    <!-- Mobile Toggle -->
     <button class="mobile-toggle" id="mobileToggle">
         <i class="fas fa-bars"></i>
     </button>
 
-    <!-- Sidebar -->
-    <aside class="sidebar" id="sidebar">
-        <div class="sidebar-toggle" id="sidebarToggle">
-            <i class="fas fa-chevron-left"></i>
-        </div>
-
-        <div class="logo">
-            <div class="logo-icon">
-                <i class="fas fa-store"></i>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-toggle" id="sidebarToggle">
+                <i class="fas fa-chevron-left"></i>
             </div>
-            <span class="logo-text">RestoFlow</span>
-        </div>
 
-        <nav class="nav-menu">
-            <a href="dashboard.php" class="nav-item">
-                <i class="fas fa-tachometer-alt"></i>
-                <span class="nav-text">Dashboard</span>
-            </a>
-            <a href="menu_management.php" class="nav-item active">
-                <i class="fas fa-utensils"></i>
-                <span class="nav-text">Menu Management</span>
-            </a>
-            <a href="orders.php" class="nav-item">
-                <i class="fas fa-clipboard-list"></i>
-                <span class="nav-text">All Orders</span>
-            </a>
-            <a href="analytics.php" class="nav-item">
-                <i class="fas fa-chart-bar"></i>
-                <span class="nav-text">Analytics</span>
-            </a>
-            <a href="settings.php" class="nav-item">
-                <i class="fas fa-cog"></i>
-                <span class="nav-text">Settings</span>
-            </a>
-        </nav>
-
-        <div class="user-actions">
-            <div class="user-info">
-                <div class="user-avatar">
-                    <?= strtoupper(substr($_SESSION['shop_name'] ?? 'S', 0, 1)) ?>
+            <div class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-store"></i>
                 </div>
-                <div class="user-name"><?= htmlspecialchars($_SESSION['shop_name'] ?? 'Shop Owner') ?></div>
-                <div class="user-role">Owner</div>
+                <span class="logo-text"><?= htmlspecialchars($shop_name) ?></span>
             </div>
-            
-            <button class="action-btn" onclick="location.href='profile.php'">
-                <i class="fas fa-user-circle"></i>
-                <span class="nav-text">Profile</span>
-            </button>
-            
-            <button class="action-btn logout" onclick="location.href='logout.php'">
-                <i class="fas fa-sign-out-alt"></i>
-                <span class="nav-text">Logout</span>
-            </button>
-        </div>
-    </aside>
 
-    <!-- Main Content -->
-    <main class="main-content" id="mainContent">
-        <!-- Top Bar -->
-        <div class="top-bar">
-            <div class="welcome-message">
-                <h1>Menu Management</h1>
-                <p>Manage your restaurant's menu items and categories</p>
-            </div>
-        </div>
-
-        <!-- Stats Cards -->
-        <?php
-        $total_items = count($menu_items);
-        $available_items = $has_availability ? array_filter($menu_items, fn($i) => $i['is_available'] ?? 0) : [];
-        $categories_count = count($categories);
-        $avg_price = $total_items > 0 ? array_sum(array_column($menu_items, 'price')) / $total_items : 0;
-        ?>
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-icon">
+            <nav class="nav-menu">
+                <a href="dashboard.php" class="nav-item">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span class="nav-text">Dashboard</span>
+                </a>
+                <a href="menu.php" class="nav-item active">
                     <i class="fas fa-utensils"></i>
-                </div>
-                <div class="stat-info">
-                    <h3><?= $total_items ?></h3>
-                    <p>Total Menu Items</p>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon">
-                    <i class="fas fa-check-circle"></i>
-                </div>
-                <div class="stat-info">
-                    <h3><?= count($available_items) ?></h3>
-                    <p>Available Items</p>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon">
-                    <i class="fas fa-tags"></i>
-                </div>
-                <div class="stat-info">
-                    <h3><?= $categories_count ?></h3>
-                    <p>Categories</p>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon">
-                    <i class="fas fa-rupee-sign"></i>
-                </div>
-                <div class="stat-info">
-                    <h3>₹<?= number_format($avg_price, 2) ?></h3>
-                    <p>Average Price</p>
-                </div>
-            </div>
-        </div>
+                    <span class="nav-text">Menu</span>
+                </a>
+                <a href="orders.php" class="nav-item">
+                    <i class="fas fa-clipboard-list"></i>
+                    <span class="nav-text">Orders</span>
+                </a>
+                <a href="analytics.php" class="nav-item">
+                    <i class="fas fa-chart-bar"></i>
+                    <span class="nav-text">Analytics</span>
+                </a>
+                <a href="settings.php" class="nav-item">
+                    <i class="fas fa-cog"></i>
+                    <span class="nav-text">Settings</span>
+                </a>
+            </nav>
 
-        <!-- Add New Item Card -->
-        <div class="card">
-            <div class="card-header">
-                <h2 class="card-title">
-                    <i class="fas fa-plus-circle"></i>
-                    Add New Menu Item
-                </h2>
-            </div>
-            
-            <form method="post" id="addItemForm">
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label class="form-label">Item Name *</label>
-                        <input type="text" name="item_name" class="form-control" required 
-                               placeholder="Enter item name" autocomplete="off">
+            <div class="user-actions">
+                <div class="user-info">
+                    <div class="user-avatar">
+                        <?= strtoupper(substr($shop_name, 0, 1)) ?>
                     </div>
-                    
-                    <?php if ($has_category): ?>
-                    <div class="form-group">
-                        <label class="form-label">Category</label>
-                        <input type="text" name="category" class="form-control" 
-                               placeholder="e.g., Starters, Main Course" list="categories" autocomplete="off">
-                        <datalist id="categories">
-                            <?php foreach ($categories as $cat): ?>
-                                <option value="<?= htmlspecialchars($cat) ?>">
-                            <?php endforeach; ?>
-                        </datalist>
-                    </div>
-                    <?php endif; ?>
-                    
-                    <div class="form-group">
-                        <label class="form-label">Price (₹) *</label>
-                        <input type="number" name="price" class="form-control" 
-                               step="0.01" min="1" required placeholder="0.00" autocomplete="off">
-                    </div>
-                    
-                    <?php if ($has_description): ?>
-                    <div class="form-group">
-                        <label class="form-label">Description</label>
-                        <input type="text" name="description" class="form-control" 
-                               placeholder="Brief description (optional)" autocomplete="off">
-                    </div>
-                    <?php endif; ?>
+                    <div class="user-name"><?= htmlspecialchars($shop_name) ?></div>
+                    <div class="user-role">Owner</div>
                 </div>
                 
-                <?php if ($has_availability): ?>
-                <div class="form-group" style="margin-top: 24px;">
-                    <label class="form-label">Availability</label>
-                    <div style="display: flex; align-items: center; gap: 20px; margin-top: 8px;">
-                        <label class="switch">
-                            <input type="checkbox" name="is_available" checked>
-                            <span class="slider"></span>
-                        </label>
-                        <span style="color: var(--gray-600); font-weight: 500;">Available for ordering</span>
-                    </div>
-                </div>
-                <?php endif; ?>
+                <button class="action-btn" onclick="location.href='profile.php'">
+                    <i class="fas fa-user-circle"></i>
+                    <span class="nav-text">Profile</span>
+                </button>
                 
-                <div style="margin-top: 32px;">
-                    <button type="submit" name="add_item" class="btn btn-primary" id="addItemBtn">
-                        <i class="fas fa-plus"></i> Add Menu Item
-                    </button>
-                    <button type="reset" class="btn btn-secondary" style="margin-left: 12px;">
-                        <i class="fas fa-redo"></i> Clear Form
-                    </button>
-                </div>
-            </form>
-        </div>
+                <button class="action-btn logout" onclick="location.href='logout.php'">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span class="nav-text">Logout</span>
+                </button>
+            </div>
+        </aside>
 
-        <!-- Menu Items Card -->
-        <div class="card">
-            <div class="card-header">
-                <h2 class="card-title">
-                    <i class="fas fa-list"></i>
-                    Menu Items (<?= $total_items ?>)
-                </h2>
+        <!-- Main Content -->
+        <main class="main-content" id="mainContent">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <div class="welcome-message">
+                    <h1>Menu Management</h1>
+                    <p>Add, edit or remove menu items</p>
+                </div>
             </div>
 
-            <?php if (empty($menu_items)): ?>
-                <div class="empty-state">
-                    <div class="empty-icon">
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon items">
                         <i class="fas fa-utensils"></i>
                     </div>
-                    <h3 class="empty-title">No menu items yet</h3>
-                    <p class="empty-subtitle">Start by adding your first menu item using the form above.</p>
+                    <div class="stat-info">
+                        <h3 class="counter" data-target="<?= $total_items ?>">0</h3>
+                        <p>Total Items</p>
+                    </div>
                 </div>
-            <?php else: ?>
-                <div class="table-container">
-                    <table class="menu-table">
-                        <thead>
-                            <tr>
-                                <th>Item</th>
-                                <?php if ($has_category): ?><th>Category</th><?php endif; ?>
-                                <th>Price</th>
-                                <?php if ($has_availability): ?><th>Status</th><?php endif; ?>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($menu_items as $item): ?>
+                <div class="stat-card">
+                    <div class="stat-icon price">
+                        <i class="fas fa-rupee-sign"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>₹<span class="counter" data-target="<?= round($avg_price) ?>">0</span></h3>
+                        <p>Average Price</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add New Item Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <i class="fas fa-plus-circle"></i>
+                        Add New Item
+                    </h2>
+                </div>
+                
+                <form method="post" id="addItemForm">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Item Name *</label>
+                            <input type="text" name="item_name" class="form-control" required 
+                                   placeholder="e.g., Chicken Burger" autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Price (₹) *</label>
+                            <input type="number" name="price" class="form-control" 
+                                   step="0.01" min="1" required placeholder="0.00" autocomplete="off">
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 32px;">
+                        <button type="submit" name="add_item" class="btn btn-primary" id="addItemBtn">
+                            <i class="fas fa-plus"></i> Add Item
+                        </button>
+                        <button type="reset" class="btn btn-secondary" style="margin-left: 12px;">
+                            <i class="fas fa-redo"></i> Clear
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Menu Items Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <i class="fas fa-list"></i>
+                        All Items (<?= $total_items ?>)
+                    </h2>
+                </div>
+
+                <?php if (empty($menu_items)): ?>
+                    <div class="empty-state">
+                        <div class="empty-icon">
+                            <i class="fas fa-utensils"></i>
+                        </div>
+                        <h3 class="empty-title">No items yet</h3>
+                        <p class="empty-subtitle">Add your first menu item above</p>
+                    </div>
+                <?php else: ?>
+                    <div class="table-container">
+                        <table class="menu-table">
+                            <thead>
                                 <tr>
-                                    <td data-label="Item">
-                                        <div class="item-name"><?= htmlspecialchars($item['item_name']) ?></div>
-                                        <?php if ($has_description && !empty($item['description'])): ?>
-                                            <div class="item-description"><?= htmlspecialchars($item['description']) ?></div>
-                                        <?php endif; ?>
-                                    </td>
-                                    <?php if ($has_category): ?>
-                                    <td data-label="Category">
-                                        <span class="item-category"><?= htmlspecialchars($item['category'] ?? 'General') ?></span>
-                                    </td>
-                                    <?php endif; ?>
-                                    <td data-label="Price">
-                                        <span class="item-price">₹<?= number_format($item['price'], 2) ?></span>
-                                    </td>
-                                    <?php if ($has_availability): ?>
-                                    <td data-label="Status">
-                                        <form method="post" style="display: inline;">
-                                            <input type="hidden" name="item_id" value="<?= $item['id'] ?>">
-                                            <input type="hidden" name="current_status" value="<?= $item['is_available'] ?? 0 ?>">
-                                            <button type="submit" name="toggle_availability" class="availability-badge <?= ($item['is_available'] ?? 0) ? 'available' : 'unavailable' ?>">
-                                                <i class="fas fa-<?= ($item['is_available'] ?? 0) ? 'check' : 'times' ?>"></i>
-                                                <?= ($item['is_available'] ?? 0) ? 'Available' : 'Unavailable' ?>
-                                            </button>
-                                        </form>
-                                    </td>
-                                    <?php endif; ?>
-                                    <td data-label="Actions" class="actions-cell">
-                                        <div class="actions-group">
-                                            <button type="button" class="btn btn-success btn-xs" onclick="editItem(<?= $item['id'] ?>)">
-                                                <i class="fas fa-edit"></i> Edit
-                                            </button>
-                                            <form method="post" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this item?');">
-                                                <input type="hidden" name="item_id" value="<?= $item['id'] ?>">
-                                                <button type="submit" name="delete_item" class="btn btn-danger btn-xs">
-                                                    <i class="fas fa-trash"></i> Delete
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </td>
+                                    <th>Item Name</th>
+                                    <th>Price</th>
+                                    <th>Actions</th>
                                 </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-            <?php endif; ?>
-        </div>
-    </main>
-</div>
+                            </thead>
+                            <tbody id="menuTableBody">
+                                <?php foreach ($menu_items as $item): ?>
+                                    <tr id="row-<?= $item['id'] ?>">
+                                        <td data-label="Item Name">
+                                            <div class="item-name"><?= htmlspecialchars($item['item_name']) ?></div>
+                                        </td>
+                                        <td data-label="Price">
+                                            <span class="item-price">₹<?= number_format($item['price'], 2) ?></span>
+                                        </td>
+                                        <td data-label="Actions" class="actions-cell">
+                                            <div class="actions-group">
+                                                <button type="button" class="btn btn-success btn-xs" onclick="editItem(<?= $item['id'] ?>, '<?= htmlspecialchars(addslashes($item['item_name']), ENT_QUOTES) ?>', <?= $item['price'] ?>)">
+                                                    <i class="fas fa-edit"></i> Edit
+                                                </button>
+                                                <form method="post" style="display: inline;" onsubmit="return confirm('Delete this item?');">
+                                                    <input type="hidden" name="item_id" value="<?= $item['id'] ?>">
+                                                    <button type="submit" name="delete_item" class="btn btn-danger btn-xs">
+                                                        <i class="fas fa-trash"></i> Delete
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </main>
+    </div>
 
-<!-- Notification Container -->
-<div id="notificationContainer"></div>
+    <!-- Notification Container -->
+    <div id="notificationContainer"></div>
 
-<script>
-// === ALL YOUR ORIGINAL JAVASCRIPT PRESERVED AND FIXED ===
-const sidebar = document.getElementById('sidebar');
-const sidebarToggle = document.getElementById('sidebarToggle');
-const mainContent = document.getElementById('mainContent');
-const mobileToggle = document.getElementById('mobileToggle');
+    <script>
+        // Sidebar Toggle
+        const sidebar = document.getElementById('sidebar');
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const mainContent = document.getElementById('mainContent');
+        const mobileToggle = document.getElementById('mobileToggle');
+        
+        let isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
 
-let isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
-
-function updateSidebar() {
-    if (isCollapsed) {
-        sidebar.classList.add('collapsed');
-        mainContent.classList.add('expanded');
-        sidebarToggle.innerHTML = '<i class="fas fa-chevron-right"></i>';
-    } else {
-        sidebar.classList.remove('collapsed');
-        mainContent.classList.remove('expanded');
-        sidebarToggle.innerHTML = '<i class="fas fa-chevron-left"></i>';
-    }
-}
-
-sidebarToggle.addEventListener('click', () => {
-    isCollapsed = !isCollapsed;
-    localStorage.setItem('sidebarCollapsed', isCollapsed);
-    updateSidebar();
-});
-
-mobileToggle.addEventListener('click', () => {
-    sidebar.classList.toggle('active');
-});
-
-document.addEventListener('click', (e) => {
-    if (window.innerWidth <= 992 && 
-        !sidebar.contains(e.target) && 
-        !mobileToggle.contains(e.target)) {
-        sidebar.classList.remove('active');
-    }
-});
-
-updateSidebar();
-
-// Notification System
-function showNotification(message, type = 'success') {
-    const container = document.getElementById('notificationContainer');
-    const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
-    const icon = type === 'success' ? 'check-circle' : 'exclamation-circle';
-    
-    notification.innerHTML = `
-        <div class="notification-icon">
-            <i class="fas fa-${icon}"></i>
-        </div>
-        <div class="notification-content">
-            <div class="notification-title">${type === 'success' ? 'Success!' : 'Error!'}</div>
-            <div class="notification-message">${message}</div>
-        </div>
-        <button class="notification-close" onclick="this.parentElement.remove()">
-            <i class="fas fa-times"></i>
-        </button>
-    `;
-    
-    container.appendChild(notification);
-    setTimeout(() => notification.classList.add('show'), 10);
-    
-    setTimeout(() => {
-        if (notification.parentElement) {
-            notification.classList.remove('show');
-            setTimeout(() => notification.remove(), 400);
+        function updateSidebar() {
+            if (isCollapsed) {
+                sidebar.classList.add('collapsed');
+                mainContent.classList.add('expanded');
+                sidebarToggle.innerHTML = '<i class="fas fa-chevron-right"></i>';
+            } else {
+                sidebar.classList.remove('collapsed');
+                mainContent.classList.remove('expanded');
+                sidebarToggle.innerHTML = '<i class="fas fa-chevron-left"></i>';
+            }
         }
-    }, 5000);
-}
 
-<?php if (!empty($message)): ?>
-setTimeout(() => {
-    showNotification("<?= addslashes($message) ?>", "<?= $message_type ?>");
-}, 500);
-<?php endif; ?>
+        sidebarToggle.addEventListener('click', () => {
+            isCollapsed = !isCollapsed;
+            localStorage.setItem('sidebarCollapsed', isCollapsed);
+            updateSidebar();
+        });
 
+        mobileToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('active');
+            mobileToggle.style.transform = sidebar.classList.contains('active') ? 'rotate(90deg)' : 'rotate(0deg)';
+        });
 
-// Edit item (safe escaping)
-function editItem(itemId) {
-    const row = document.querySelector(`tr:has(button[onclick="editItem(${itemId})"])`) ||
-                [...document.querySelectorAll('tr')].find(r => r.innerHTML.includes(`editItem(${itemId})`));
-    if (!row) return;
+        document.addEventListener('click', (e) => {
+            if (window.innerWidth <= 992 && !sidebar.contains(e.target) && !mobileToggle.contains(e.target)) {
+                sidebar.classList.remove('active');
+                mobileToggle.style.transform = 'rotate(0deg)';
+            }
+        });
 
-    const nameCell = row.querySelector('.item-name');
-    const descCell = row.querySelector('.item-description');
-    const catCell = row.querySelector('.item-category');
-    const priceCell = row.querySelector('.item-price');
-    const availBadge = row.querySelector('.availability-badge');
+        updateSidebar();
 
-    const itemName = nameCell?.textContent.trim() || '';
-    const description = descCell?.textContent.trim() || '';
-    const category = catCell?.textContent.trim() || 'General';
-    const price = priceCell?.textContent.replace(/[^0-9.]/g, '') || '0';
-    const isAvailable = availBadge?.classList.contains('available');
+        // Animated Counters
+        function animateCounters() {
+            document.querySelectorAll('.counter').forEach(counter => {
+                const target = parseInt(counter.getAttribute('data-target')) || 0;
+                const duration = 1000;
+                const step = target / (duration / 16);
+                let current = 0;
+                
+                const updateCounter = () => {
+                    current += step;
+                    if (current < target) {
+                        counter.textContent = Math.floor(current);
+                        requestAnimationFrame(updateCounter);
+                    } else {
+                        counter.textContent = target;
+                    }
+                };
+                updateCounter();
+            });
+        }
+        animateCounters();
 
-    row.innerHTML = `
-        <td colspan="${row.cells.length}">
-            <form method="post" class="edit-form">
-                <input type="hidden" name="item_id" value="${itemId}">
-                <input type="text" name="item_name" class="form-control" value="${itemName.replace(/"/g, '&quot;')}" required>
-                ${'<?php echo $has_category ?>' ? `<input type="text" name="category" class="form-control" value="${category.replace(/"/g, '&quot;')}">` : ''}
-                <input type="number" name="price" class="form-control" value="${price}" step="0.01" min="1" required>
-                ${'<?php echo $has_description ?>' ? `<input type="text" name="description" class="form-control" value="${description.replace(/"/g, '&quot;')}">` : ''}
-                ${'<?php echo $has_availability ?>' ? `
-                <div>
-                    <label class="switch" style="margin-top:8px">
-                        <input type="checkbox" name="is_available" ${isAvailable ? 'checked' : ''}>
-                        <span class="slider"></span>
-                    </label>
-                </div>` : ''}
-                <div style="grid-column:1/-1;display:flex;gap:10px;margin-top:15px;">
-                    <button type="submit" name="edit_item" class="btn btn-success btn-sm">
-                        <i class="fas fa-save"></i> Save
-                    </button>
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="location.reload()">
-                        <i class="fas fa-times"></i> Cancel
-                    </button>
+        // Notification System
+        function showNotification(message, type = 'success') {
+            const container = document.getElementById('notificationContainer');
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            const icon = type === 'success' ? 'check-circle' : 'exclamation-circle';
+            
+            notification.innerHTML = `
+                <div class="notification-icon"><i class="fas fa-${icon}"></i></div>
+                <div class="notification-content">
+                    <div class="notification-title">${type === 'success' ? 'Success!' : 'Error!'}</div>
+                    <div class="notification-message">${message}</div>
                 </div>
-            </form>
-        </td>
-    `;
-}
-</script>
+                <button class="notification-close" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>
+            `;
+            
+            container.appendChild(notification);
+            setTimeout(() => notification.classList.add('show'), 10);
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.classList.remove('show');
+                    setTimeout(() => notification.remove(), 400);
+                }
+            }, 5000);
+        }
 
+        <?php if (!empty($message)): ?>
+        setTimeout(() => showNotification("<?= addslashes($message) ?>", "<?= $message_type ?>"), 500);
+        <?php endif; ?>
+
+        // Inline Edit
+        function editItem(id, name, price) {
+            const row = document.getElementById('row-' + id);
+            if (!row) return;
+            
+            // Remove any existing edit rows
+            document.querySelectorAll('.edit-form-row').forEach(r => {
+                const originalId = r.getAttribute('data-original-id');
+                location.reload(); // Simple refresh to restore
+            });
+            
+            const cells = row.cells;
+            cells[0].innerHTML = `
+                <form method="post" class="edit-form" style="display: contents;">
+                    <input type="hidden" name="item_id" value="${id}">
+                    <input type="text" name="item_name" class="form-control" value="${name.replace(/"/g, '&quot;')}" required style="width: 100%;">
+            `;
+            cells[1].innerHTML = `
+                    <input type="number" name="price" class="form-control" value="${price}" step="0.01" min="1" required style="width: 150px;">
+            `;
+            cells[2].innerHTML = `
+                    <div class="actions-group">
+                        <button type="submit" name="edit_item" class="btn btn-success btn-xs"><i class="fas fa-save"></i> Save</button>
+                        <button type="button" class="btn btn-secondary btn-xs" onclick="location.reload()"><i class="fas fa-times"></i> Cancel</button>
+                    </div>
+                </form>
+            `;
+            
+            row.classList.add('edit-form-row');
+            row.setAttribute('data-original-id', id);
+        }
+
+        // Form loading state
+        document.querySelectorAll('form').forEach(form => {
+            form.addEventListener('submit', function(e) {
+                const btn = this.querySelector('button[type="submit"]');
+                if (btn && !btn.classList.contains('btn-secondary')) {
+                    btn.classList.add('loading');
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+                }
+            });
+        });
+    </script>
 </body>
 </html>

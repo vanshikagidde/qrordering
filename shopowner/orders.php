@@ -9,27 +9,34 @@ if (!isset($_SESSION['shop_id']) || !isset($_SESSION['logged_in'])) {
 }
 
 $shop_id = (int)$_SESSION['shop_id'];
+$shop_name = $_SESSION['shop_name'] ?? 'My Shop';
 $message = '';
 $message_type = '';
 
-// Handle status update
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
-    $order_id   = (int)($_POST['order_id'] ?? 0);
-    $new_status = trim($_POST['new_status'] ?? '');
+// Handle AJAX status update
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    header('Content-Type: application/json');
+    
+    if ($_POST['action'] === 'update_status') {
+        $order_id   = (int)($_POST['order_id'] ?? 0);
+        $new_status = trim($_POST['new_status'] ?? '');
 
-    $allowed_statuses = ['pending', 'paid', 'completed', 'cancelled'];
+        $allowed_statuses = ['pending', 'paid', 'completed', 'cancelled'];
 
-    if ($order_id > 0 && in_array($new_status, $allowed_statuses)) {
-        $stmt = $conn->prepare("UPDATE orders SET status = ? WHERE order_id = ? AND shop_id = ?");
-        $stmt->bind_param("sii", $new_status, $order_id, $shop_id);
-        if ($stmt->execute()) {
-            $message = "Order status updated successfully!";
-            $message_type = 'success';
+        if ($order_id > 0 && in_array($new_status, $allowed_statuses)) {
+            $stmt = $conn->prepare("UPDATE orders SET status = ? WHERE order_id = ? AND shop_id = ?");
+            $stmt->bind_param("sii", $new_status, $order_id, $shop_id);
+            
+            if ($stmt->execute()) {
+                echo json_encode(['success' => true, 'message' => 'Status updated']);
+            } else {
+                echo json_encode(['success' => false, 'error' => $conn->error]);
+            }
+            $stmt->close();
         } else {
-            $message = "Error updating status: " . $conn->error;
-            $message_type = 'error';
+            echo json_encode(['success' => false, 'error' => 'Invalid request']);
         }
-        $stmt->close();
+        exit;
     }
 }
 
@@ -78,9 +85,7 @@ if ($search_query) {
     $types   .= "ssss";
 }
 
-$query .= " GROUP BY o.order_id
-            ORDER BY o.created_at DESC
-            LIMIT 200";
+$query .= " GROUP BY o.order_id ORDER BY o.created_at DESC LIMIT 200";
 
 $stmt = $conn->prepare($query);
 $stmt->bind_param($types, ...$params);
@@ -103,779 +108,779 @@ $total_orders = count($orders);
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>All Orders - <?= htmlspecialchars($_SESSION['shop_name'] ?? 'Dashboard') ?></title>
+    <title>Orders - <?= htmlspecialchars($shop_name) ?></title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
     <style>
         :root {
-            --primary: #7c3aed;
-            --primary-light: #a78bfa;
-            --primary-dark: #6d28d9;
-            --secondary: #10b981;
-            --secondary-light: #34d399;
-            --dark: #1f2937;
-            --darker: #111827;
-            --gray-50: #f9fafb;
-            --gray-100: #f3f4f6;
-            --gray-200: #e5e7eb;
-            --gray-300: #d1d5db;
-            --gray-400: #9ca3af;
-            --gray-600: #4b5563;
-            --gray-700: #374151;
-            --light: #ffffff;
-            --success: #10b981;
-            --success-light: #d1fae5;
-            --warning: #f59e0b;
-            --warning-light: #fef3c7;
-            --info: #3b82f6;
-            --info-light: #dbeafe;
-            --danger: #ef4444;
-            --danger-light: #fee2e2;
-            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-            --radius: 12px;
-            --radius-lg: 16px;
-            --radius-xl: 20px;
-            --sidebar-width: 260px;
-            --sidebar-collapsed: 70px;
-            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --primary: #F97316;
+            --primary-light: #FB923C;
+            --primary-dark: #EA580C;
+            --secondary: #0F172A;
+            --surface: #FFFFFF;
+            --background: #F8FAFC;
+            --text: #1E293B;
+            --text-secondary: #64748B;
+            --border: #E2E8F0;
+            --success: #10B981;
+            --warning: #F59E0B;
+            --info: #3B82F6;
+            --danger: #EF4444;
+            
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+            --shadow-orange: 0 10px 40px -10px rgba(249, 115, 22, 0.5);
+            
+            --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+            --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+            --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+            --radius: 16px;
+            --radius-sm: 12px;
+            --sidebar-width: 280px;
         }
 
         * { margin:0; padding:0; box-sizing:border-box; }
+        
         body {
-            font-family: 'Inter', 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
-            color: var(--dark);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: linear-gradient(135deg, #F8FAFC 0%, #FFF7ED 100%);
+            color: var(--text);
             min-height: 100vh;
             overflow-x: hidden;
+        }
+
+        /* Background Animation */
+        .bg-shapes {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .shape {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.4;
+            animation: float 20s infinite ease-in-out;
+        }
+
+        .shape-1 {
+            width: 400px;
+            height: 400px;
+            background: linear-gradient(135deg, rgba(249, 115, 22, 0.3), rgba(251, 146, 60, 0.1));
+            top: -100px;
+            right: -100px;
+        }
+
+        .shape-2 {
+            width: 300px;
+            height: 300px;
+            background: linear-gradient(135deg, rgba(255, 237, 213, 0.6), rgba(254, 215, 170, 0.2));
+            bottom: 10%;
+            left: -50px;
+            animation-delay: -5s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -30px) scale(1.1); }
+            66% { transform: translate(-20px, 20px) scale(0.9); }
         }
 
         .dashboard-container {
             display: flex;
             min-height: 100vh;
             position: relative;
+            z-index: 1;
         }
 
-        /* Sidebar Styles */
+        /* Glassmorphism Sidebar */
         .sidebar {
             width: var(--sidebar-width);
-            background: linear-gradient(180deg, var(--darker) 0%, #1e1b4b 100%);
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(20px);
             color: white;
             position: fixed;
             height: 100vh;
-            padding: 24px 16px;
+            padding: 24px 20px;
             display: flex;
             flex-direction: column;
             z-index: 100;
-            transition: var(--transition);
-            box-shadow: var(--shadow-xl);
-        }
-
-        .sidebar.collapsed { width: var(--sidebar-collapsed); }
-        .sidebar.collapsed .logo-text,
-        .sidebar.collapsed .nav-text,
-        .sidebar.collapsed .user-info { display: none; }
-        .sidebar.collapsed .user-actions { flex-direction: column; gap: 12px; }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 0 8px 24px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            margin-bottom: 24px;
-        }
-
-        .logo-icon {
-            width: 40px;
-            height: 40px;
-            background: linear-gradient(135deg, var(--primary), #a855f7);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-        }
-
-        .logo-text {
-            font-size: 1.5rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, #ffffff, #c7d2fe);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            transition: all 0.4s var(--ease-expo);
+            border-right: 1px solid rgba(255,255,255,0.05);
         }
 
         .sidebar-toggle {
             position: absolute;
             right: -12px;
-            top: 24px;
-            width: 24px;
-            height: 24px;
-            background: var(--light);
-            border: 2px solid var(--primary);
+            top: 32px;
+            width: 28px;
+            height: 28px;
+            background: var(--primary);
+            border: 3px solid var(--surface);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            color: var(--primary);
-            font-size: 12px;
-            transition: var(--transition);
+            color: white;
+            font-size: 11px;
+            transition: all 0.3s var(--ease-spring);
             z-index: 101;
+            box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4);
         }
 
         .sidebar-toggle:hover {
-            transform: scale(1.1);
-            box-shadow: var(--shadow);
+            transform: scale(1.15) rotate(180deg);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 8px 4px 24px;
+            margin-bottom: 24px;
+            position: relative;
+        }
+
+        .logo::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+        }
+
+        .logo-icon {
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            box-shadow: 0 8px 20px rgba(249, 115, 22, 0.3);
+            animation: iconPulse 3s infinite;
+        }
+
+        @keyframes iconPulse {
+            0%, 100% { box-shadow: 0 8px 20px rgba(249, 115, 22, 0.3); }
+            50% { box-shadow: 0 12px 30px rgba(249, 115, 22, 0.5); }
+        }
+
+        .logo-text {
+            font-size: 1.4rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ffffff, #cbd5e1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
         .nav-menu {
             flex: 1;
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 6px;
         }
 
         .nav-item {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 14px;
             padding: 14px 16px;
-            border-radius: 10px;
-            color: rgba(255, 255, 255, 0.8);
+            border-radius: 12px;
+            color: rgba(255,255,255,0.6);
             text-decoration: none;
-            transition: var(--transition);
+            transition: all 0.3s var(--ease-spring);
+            font-weight: 500;
+            font-size: 15px;
         }
 
         .nav-item:hover {
-            background: rgba(255, 255, 255, 0.1);
             color: white;
-            transform: translateX(4px);
+            background: rgba(255,255,255,0.05);
+            transform: translateX(6px);
         }
 
         .nav-item.active {
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: white;
-            box-shadow: var(--shadow);
+            background: linear-gradient(135deg, rgba(249, 115, 22, 0.2), rgba(249, 115, 22, 0.05));
+            color: var(--primary-light);
+            font-weight: 600;
         }
 
-        .nav-item i { font-size: 18px; width: 24px; text-align: center; }
-        .nav-text { font-weight: 500; font-size: 15px; }
+        .nav-item i {
+            font-size: 18px;
+            width: 24px;
+            text-align: center;
+        }
 
         .user-actions {
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            padding-top: 20px;
             margin-top: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255,255,255,0.1);
         }
 
-        .user-info { padding: 0 8px 16px; text-align: center; }
+        .user-info {
+            padding: 0 8px 16px;
+            text-align: center;
+        }
 
         .user-avatar {
-            width: 40px;
-            height: 40px;
-            background: linear-gradient(135deg, #8b5cf6, #ec4899);
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--primary), #fbbf24);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: 600;
-            margin: 0 auto 8px;
+            font-weight: 800;
+            font-size: 18px;
+            margin: 0 auto 10px;
+            box-shadow: 0 4px 15px rgba(249, 115, 22, 0.3);
+            border: 3px solid rgba(255,255,255,0.1);
         }
 
-        .user-name { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
-        .user-role { font-size: 12px; color: rgba(255, 255, 255, 0.6); }
+        .user-name {
+            font-weight: 700;
+            font-size: 15px;
+        }
+
+        .user-role {
+            font-size: 12px;
+            color: rgba(255,255,255,0.4);
+        }
 
         .action-btn {
             display: flex;
             align-items: center;
             gap: 12px;
-            padding: 14px 16px;
+            padding: 12px 16px;
             border-radius: 10px;
             background: transparent;
             border: none;
-            color: rgba(255, 255, 255, 0.8);
+            color: rgba(255,255,255,0.6);
             font-family: inherit;
-            font-size: 15px;
+            font-size: 14px;
             cursor: pointer;
-            transition: var(--transition);
+            transition: all 0.3s;
             width: 100%;
             text-align: left;
+            font-weight: 500;
         }
 
-        .action-btn:hover { background: rgba(255, 255, 255, 0.1); color: white; }
-        .action-btn.logout { color: #fca5a5; }
-        .action-btn.logout:hover { background: rgba(239, 68, 68, 0.2); }
+        .action-btn:hover {
+            color: white;
+            background: rgba(255,255,255,0.08);
+        }
+
+        .action-btn.logout {
+            color: #fca5a5;
+            margin-top: 4px;
+        }
+
+        .action-btn.logout:hover {
+            background: rgba(239, 68, 68, 0.15);
+        }
 
         /* Main Content */
         .main-content {
             flex: 1;
             margin-left: var(--sidebar-width);
-            padding: 24px;
-            transition: var(--transition);
+            padding: 32px;
+            transition: all 0.4s var(--ease-expo);
         }
-
-        .main-content.expanded { margin-left: var(--sidebar-collapsed); }
 
         /* Top Bar */
         .top-bar {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 32px;
-            background: var(--light);
-            padding: 24px 32px;
-            border-radius: var(--radius-xl);
-            box-shadow: var(--shadow);
-            border: 1px solid var(--gray-100);
+            margin-bottom: 24px;
+            animation: slideDown 0.6s var(--ease-expo) backwards;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .welcome-message h1 {
             font-size: 1.75rem;
-            font-weight: 700;
-            color: var(--darker);
-            margin-bottom: 8px;
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+            color: var(--secondary);
+            letter-spacing: -0.02em;
         }
 
         .welcome-message p {
-            color: var(--gray-600);
-            font-size: 15px;
-            font-weight: 500;
-        }
-
-        /* Stats Grid */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 32px;
-        }
-
-        .stat-card {
-            background: var(--light);
-            padding: 24px;
-            border-radius: var(--radius-xl);
-            box-shadow: var(--shadow);
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            transition: var(--transition);
-            border: 1px solid var(--gray-100);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .stat-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 6px;
-            height: 100%;
-            background: linear-gradient(to bottom, var(--primary), var(--primary-dark));
-        }
-
-        .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: var(--shadow-lg);
-        }
-
-        .stat-icon {
-            width: 56px;
-            height: 56px;
-            border-radius: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            color: white;
-        }
-
-        .stat-info h3 {
-            font-size: 28px;
-            font-weight: 700;
-            color: var(--darker);
-            line-height: 1;
-            margin-bottom: 4px;
-        }
-
-        .stat-info p {
-            color: var(--gray-600);
+            color: var(--text-secondary);
             font-size: 14px;
             font-weight: 500;
+            margin-top: 4px;
         }
 
-        /* Cards */
-        .card {
-            background: var(--light);
-            border-radius: var(--radius-xl);
+        .live-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 700;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .live-indicator::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: var(--success);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+
+        /* Stats Pills */
+        .stats-pills {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            animation: slideUp 0.6s var(--ease-expo) 0.1s backwards;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .stat-pill {
+            background: var(--surface);
+            padding: 12px 20px;
+            border-radius: 50px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border);
+            transition: all 0.3s var(--ease-spring);
+            cursor: pointer;
+        }
+
+        .stat-pill:hover, .stat-pill.active {
+            transform: translateY(-2px);
             box-shadow: var(--shadow);
-            padding: 32px;
-            margin-bottom: 32px;
-            border: 1px solid var(--gray-100);
-            transition: var(--transition);
         }
 
-        .card:hover {
-            box-shadow: var(--shadow-lg);
+        .stat-pill.active {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white;
+            border-color: transparent;
         }
 
-        .card-header {
+        .stat-pill i {
+            font-size: 14px;
+        }
+
+        .stat-pill span {
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .stat-pill small {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-left: 4px;
+        }
+
+        /* Search & Filter Bar */
+        .filter-bar {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px);
+            padding: 16px 24px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+            border: 1px solid rgba(255,255,255,0.6);
+            margin-bottom: 24px;
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            flex-wrap: wrap;
+            animation: slideUp 0.6s var(--ease-expo) 0.2s backwards;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 300px;
+            position: relative;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 12px 16px 12px 44px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.3s;
+            background: white;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.1);
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+        }
+
+        .date-filters {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .date-filters input {
+            padding: 10px 14px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            font-size: 13px;
+            font-family: inherit;
+        }
+
+        .clear-btn {
+            background: var(--surface);
+            border: 2px solid var(--border);
+            color: var(--text-secondary);
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .clear-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        /* Orders Grid */
+        .orders-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+            animation: slideUp 0.6s var(--ease-expo) 0.3s backwards;
+        }
+
+        .order-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+            border: 1px solid rgba(255,255,255,0.6);
+            overflow: hidden;
+            transition: all 0.4s var(--ease-spring);
+            animation: cardEnter 0.6s var(--ease-expo) backwards;
+            position: relative;
+        }
+
+        .order-card:nth-child(1) { animation-delay: 0.1s; }
+        .order-card:nth-child(2) { animation-delay: 0.15s; }
+        .order-card:nth-child(3) { animation-delay: 0.2s; }
+        .order-card:nth-child(4) { animation-delay: 0.25s; }
+        .order-card:nth-child(5) { animation-delay: 0.3s; }
+        .order-card:nth-child(6) { animation-delay: 0.35s; }
+
+        @keyframes cardEnter {
+            from { 
+                opacity: 0; 
+                transform: translateY(30px) scale(0.95); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0) scale(1); 
+            }
+        }
+
+        .order-card:hover {
+            transform: translateY(-6px) scale(1.02);
+            box-shadow: var(--shadow-xl), var(--shadow-orange);
+        }
+
+        .order-card.new-order {
+            animation: newOrderPulse 2s infinite;
+        }
+
+        @keyframes newOrderPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.4); }
+            50% { box-shadow: 0 0 0 15px rgba(249, 115, 22, 0); }
+        }
+
+        .order-header {
+            background: linear-gradient(135deg, var(--secondary), #1e293b);
+            color: white;
+            padding: 16px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 32px;
-            padding-bottom: 20px;
-            border-bottom: 2px solid var(--gray-100);
-        }
-
-        .card-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--darker);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .card-title i {
-            color: var(--primary);
-        }
-
-        /* Filter Form */
-        .filter-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 0;
-        }
-
-        .form-group {
-            margin-bottom: 0;
-        }
-
-        .form-label {
-            display: block;
-            margin-bottom: 10px;
-            font-weight: 600;
-            color: var(--gray-700);
-            font-size: 14px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .form-control {
-            width: 100%;
-            padding: 14px 18px;
-            border: 2px solid var(--gray-200);
-            border-radius: 12px;
-            font-size: 15px;
-            font-family: 'Inter', sans-serif;
-            transition: var(--transition);
-            background: var(--light);
-        }
-
-        .form-control:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.1);
-        }
-
-        .form-select {
-            appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%234b5563' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 16px center;
-            background-size: 16px;
-            padding-right: 48px;
-        }
-
-        /* Buttons */
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            padding: 14px 28px;
-            border: none;
-            border-radius: 12px;
-            font-weight: 600;
-            font-size: 15px;
-            cursor: pointer;
-            transition: var(--transition);
-            font-family: 'Inter', sans-serif;
-        }
-
-        .btn i { font-size: 16px; }
-
-        .btn-primary {
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: white;
-            box-shadow: 0 4px 14px rgba(124, 58, 237, 0.3);
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
-        }
-
-        .btn-secondary {
-            background: var(--gray-100);
-            color: var(--gray-700);
-        }
-
-        .btn-secondary:hover {
-            background: var(--gray-200);
-        }
-
-        .btn-sm {
-            padding: 10px 18px;
-            font-size: 14px;
-        }
-
-        .btn-xs {
-            padding: 8px 16px;
-            font-size: 13px;
-            border-radius: 10px;
-        }
-
-        /* Table */
-        .table-container {
-            overflow-x: auto;
-            border-radius: var(--radius-lg);
-            border: 1px solid var(--gray-100);
-        }
-
-        .orders-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-        }
-
-        .orders-table thead {
-            background: linear-gradient(135deg, var(--gray-50), var(--gray-100));
-        }
-
-        .orders-table th {
-            padding: 16px;
-            text-align: left;
-            font-weight: 600;
-            color: var(--gray-700);
-            font-size: 14px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            border-bottom: 2px solid var(--gray-200);
-        }
-
-        .orders-table tbody tr {
-            transition: var(--transition);
-            background: var(--light);
-        }
-
-        .orders-table tbody tr:hover {
-            background: var(--gray-50);
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-sm);
-        }
-
-        .orders-table td {
-            padding: 16px;
-            border-bottom: 1px solid var(--gray-100);
-            vertical-align: middle;
         }
 
         .order-id {
-            font-weight: 700;
-            color: var(--primary);
-            font-size: 15px;
+            font-size: 18px;
+            font-weight: 800;
         }
 
-        .order-details {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
+        .order-time {
+            font-size: 12px;
+            opacity: 0.8;
+            font-weight: 500;
+        }
+
+        .order-body {
+            padding: 20px;
         }
 
         .order-meta {
             display: flex;
             gap: 12px;
-            font-size: 13px;
-            color: var(--gray-600);
+            margin-bottom: 16px;
         }
 
-        .order-meta i {
-            color: var(--primary);
-            width: 16px;
+        .meta-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: rgba(249, 115, 22, 0.1);
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--primary-dark);
+        }
+
+        .meta-badge i {
+            font-size: 12px;
         }
 
         .order-items {
-            font-size: 13px;
-            color: var(--gray-600);
-            margin-top: 4px;
-            line-height: 1.5;
-            max-width: 300px;
+            margin-bottom: 16px;
+        }
+
+        .item-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px dashed var(--border);
+            font-size: 14px;
+        }
+
+        .item-row:last-child {
+            border-bottom: none;
+        }
+
+        .item-name {
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .item-qty {
+            background: var(--primary);
+            color: white;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .order-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 16px;
+            border-top: 2px solid var(--border);
         }
 
         .order-total {
-            font-weight: 700;
-            font-size: 16px;
-            color: var(--darker);
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--secondary);
         }
 
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 8px 14px;
-            border-radius: 18px;
-            font-size: 13px;
-            font-weight: 600;
+        .order-total small {
+            font-size: 12px;
+            color: var(--text-secondary);
+            display: block;
+            font-weight: 500;
         }
 
-        .status-pending {
-            background: var(--warning-light);
-            color: var(--warning);
-        }
-
-        .status-paid {
-            background: var(--info-light);
-            color: var(--info);
-        }
-
-        .status-completed {
-            background: var(--success-light);
-            color: var(--success);
-        }
-
-        .status-cancelled {
-            background: var(--danger-light);
-            color: var(--danger);
-        }
-
-        .order-date {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-
-        .order-time {
-            font-size: 13px;
-            color: var(--gray-600);
-        }
-
-        .action-buttons {
-            display: flex;
-            gap: 8px;
-        }
-
-        .view-btn {
-            background: var(--primary);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 8px 16px;
-            font-size: 13px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            transition: var(--transition);
-        }
-
-        .view-btn:hover {
-            background: var(--primary-dark);
-            transform: translateY(-2px);
-        }
-
-        /* Status Select */
         .status-select {
-            padding: 6px 10px;
-            border: 2px solid var(--gray-200);
-            border-radius: 6px;
-            background: white;
+            padding: 10px 16px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
             font-size: 13px;
+            font-weight: 700;
             cursor: pointer;
-            transition: var(--transition);
-            width: 100%;
-            margin-top: 8px;
+            transition: all 0.3s;
+            background: white;
+            min-width: 140px;
         }
 
         .status-select:focus {
             outline: none;
             border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.1);
         }
 
-        /* Token/Table Display - NORMAL SIZE */
-        .token-display {
-            font-family: 'Courier New', monospace;
+        .status-select option {
             font-weight: 600;
-            color: var(--primary);
-            background: var(--gray-50);
-            padding: 6px 10px;
-            border-radius: 6px;
-            border: 1px solid var(--gray-200);
-            font-size: 14px;
-            display: inline-block;
         }
 
-        .table-display {
-            font-family: 'Courier New', monospace;
-            font-weight: 600;
-            color: var(--info);
-            background: var(--gray-50);
-            padding: 6px 10px;
-            border-radius: 6px;
-            border: 1px solid var(--gray-200);
-            font-size: 14px;
-            display: inline-block;
-        }
+        /* Status Colors */
+        .status-pending { color: var(--warning); background: #FEF3C7; }
+        .status-paid { color: var(--info); background: #DBEAFE; }
+        .status-completed { color: var(--success); background: #D1FAE5; }
+        .status-cancelled { color: var(--danger); background: #FEE2E2; }
 
         /* Empty State */
         .empty-state {
             text-align: center;
-            padding: 80px 20px;
-            color: var(--gray-600);
+            padding: 80px 40px;
+            grid-column: 1 / -1;
+            animation: fadeIn 0.6s var(--ease-expo) backwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
 
         .empty-icon {
-            font-size: 4rem;
-            color: var(--gray-300);
-            margin-bottom: 24px;
-            opacity: 0.5;
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, rgba(249, 115, 22, 0.1), rgba(251, 146, 60, 0.05));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            font-size: 48px;
+            color: var(--primary);
+            animation: float 6s ease-in-out infinite;
         }
 
         .empty-title {
             font-size: 1.5rem;
-            color: var(--gray-700);
-            margin-bottom: 12px;
-            font-weight: 600;
+            font-weight: 700;
+            color: var(--secondary);
+            margin-bottom: 8px;
         }
 
         .empty-subtitle {
-            color: var(--gray-600);
-            max-width: 400px;
-            margin: 0 auto;
-            line-height: 1.6;
+            color: var(--text-secondary);
+            font-size: 15px;
+        }
+
+        /* Mobile Toggle */
+        .mobile-toggle {
+            display: none;
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 99;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white;
+            border: none;
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: var(--shadow-lg);
+            transition: all 0.3s var(--ease-spring);
+        }
+
+        .mobile-toggle:hover {
+            transform: scale(1.1) rotate(5deg);
         }
 
         /* Notification */
         .notification {
             position: fixed;
-            top: 30px;
-            right: 30px;
-            background: var(--light);
-            padding: 20px 24px;
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-lg);
+            top: 24px;
+            right: 24px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            padding: 16px 24px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-xl);
             display: flex;
             align-items: center;
-            gap: 16px;
+            gap: 12px;
             z-index: 1000;
-            min-width: 350px;
-            max-width: 400px;
-            transform: translateX(120%);
-            transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
-            border-left: 5px solid var(--primary);
+            animation: slideInRight 0.4s var(--ease-spring);
+            border-left: 4px solid var(--primary);
+            font-weight: 600;
+            font-size: 14px;
+            min-width: 300px;
         }
 
-        .notification.show {
-            transform: translateX(0);
+        @keyframes slideInRight {
+            from { transform: translateX(100%) scale(0.9); opacity: 0; }
+            to { transform: translateX(0) scale(1); opacity: 1; }
         }
 
-        .notification.success {
-            border-left-color: var(--success);
-        }
+        .notification.success { border-left-color: var(--success); }
+        .notification.error { border-left-color: var(--danger); }
 
-        .notification.error {
-            border-left-color: var(--danger);
-        }
-
-        .notification-icon {
-            width: 40px;
-            height: 40px;
+        .notification button {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            margin-left: auto;
+            width: 28px;
+            height: 28px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 18px;
-            flex-shrink: 0;
+            transition: all 0.2s;
         }
 
-        .notification.success .notification-icon {
-            background: var(--success-light);
-            color: var(--success);
-        }
-
-        .notification.error .notification-icon {
-            background: var(--danger-light);
-            color: var(--danger);
-        }
-
-        .notification-content {
-            flex: 1;
-        }
-
-        .notification-title {
-            font-weight: 600;
-            margin-bottom: 4px;
-            color: var(--darker);
-        }
-
-        .notification-message {
-            color: var(--gray-600);
-            font-size: 14px;
-            line-height: 1.5;
-        }
-
-        .notification-close {
-            background: none;
-            border: none;
-            color: var(--gray-400);
-            cursor: pointer;
-            font-size: 18px;
-            transition: var(--transition);
-        }
-
-        .notification-close:hover {
-            color: var(--gray-700);
-        }
-
-        /* Export Buttons */
-        .export-buttons {
-            display: flex;
-            gap: 12px;
-        }
-
-        .export-btn {
-            padding: 10px 20px;
-            border: 2px solid var(--primary);
-            background: white;
-            color: var(--primary);
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: var(--transition);
-        }
-
-        .export-btn:hover {
-            background: var(--primary);
-            color: white;
+        .notification button:hover {
+            background: var(--background);
+            color: var(--text);
         }
 
         /* Responsive */
-        @media (max-width: 1200px) {
-            .filter-grid {
-                grid-template-columns: repeat(2, 1fr);
+        @media (max-width: 1024px) {
+            .orders-grid {
+                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             }
         }
 
@@ -888,724 +893,495 @@ $total_orders = count($orders);
             }
             .main-content {
                 margin-left: 0;
-            }
-            .mobile-toggle {
-                display: block;
-            }
-            .filter-grid {
-                grid-template-columns: 1fr;
-            }
-            .notification {
-                left: 20px;
-                right: 20px;
-                min-width: auto;
-                max-width: none;
-            }
-            .card-header {
-                flex-direction: column;
-                gap: 20px;
-                align-items: flex-start;
-            }
-            .export-buttons {
-                width: 100%;
-                justify-content: flex-start;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-            .top-bar {
-                flex-direction: column;
-                gap: 20px;
-                text-align: center;
-            }
-            .main-content {
-                padding: 16px;
-            }
-            .card {
-                padding: 24px;
-            }
-            .orders-table {
-                display: block;
-            }
-            .orders-table thead {
-                display: none;
-            }
-            .orders-table tbody tr {
-                display: block;
-                margin-bottom: 20px;
-                border: 1px solid var(--gray-200);
-                border-radius: var(--radius);
                 padding: 20px;
             }
-            .orders-table td {
+            .mobile-toggle {
                 display: flex;
-                justify-content: space-between;
                 align-items: center;
-                padding: 12px 0;
-                border-bottom: 1px solid var(--gray-100);
+                justify-content: center;
             }
-            .orders-table td:last-child {
-                border-bottom: none;
+            .top-bar {
+                margin-top: 60px;
+                flex-direction: column;
+                gap: 16px;
+                text-align: center;
             }
-            .orders-table td::before {
-                content: attr(data-label);
-                font-weight: 600;
-                color: var(--gray-700);
-                font-size: 14px;
-                text-transform: uppercase;
-                margin-right: 10px;
+            .filter-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .search-box {
+                min-width: auto;
+            }
+            .date-filters {
+                width: 100%;
+                justify-content: space-between;
             }
         }
 
-        .mobile-toggle {
-            display: none;
+        @media (max-width: 640px) {
+            .orders-grid {
+                grid-template-columns: 1fr;
+            }
+            .stats-pills {
+                justify-content: center;
+            }
+        }
+
+        /* Loading Overlay */
+        .loading-overlay {
             position: fixed;
-            top: 20px;
-            left: 20px;
-            z-index: 99;
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: white;
-            border: none;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.8);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .loading-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .spinner {
             width: 50px;
             height: 50px;
-            border-radius: 12px;
-            font-size: 20px;
-            cursor: pointer;
-            box-shadow: var(--shadow-lg);
-            transition: var(--transition);
-        }
-
-        .mobile-toggle:hover {
-            transform: scale(1.05);
-        }
-
-        /* Animations */
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .stat-card, .card {
-            animation: slideIn 0.5s ease-out;
-        }
-
-        /* Loading State */
-        .loading {
-            position: relative;
-            pointer-events: none;
-            opacity: 0.7;
-        }
-
-        .loading::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 20px;
-            height: 20px;
-            margin: -10px 0 0 -10px;
-            border: 2px solid var(--gray-300);
+            border: 4px solid var(--border);
             border-top-color: var(--primary);
             border-radius: 50%;
-            animation: spin 0.8s linear infinite;
+            animation: spin 1s linear infinite;
         }
 
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
-
-        /* Pagination */
-        .pagination {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 8px;
-            margin-top: 32px;
-            padding-top: 24px;
-            border-top: 1px solid var(--gray-200);
-        }
-
-        .page-btn {
-            padding: 10px 16px;
-            border: 1px solid var(--gray-300);
-            background: white;
-            color: var(--gray-700);
-            border-radius: 8px;
-            cursor: pointer;
-            transition: var(--transition);
-        }
-
-        .page-btn:hover:not(.disabled) {
-            background: var(--gray-100);
-        }
-
-        .page-btn.active {
-            background: var(--primary);
-            color: white;
-            border-color: var(--primary);
-        }
-
-        .page-btn.disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
     </style>
 </head>
 <body>
+    <div class="bg-shapes">
+        <div class="shape shape-1"></div>
+        <div class="shape shape-2"></div>
+    </div>
 
-<div class="dashboard-container">
-    <!-- Mobile Toggle -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+    </div>
+
     <button class="mobile-toggle" id="mobileToggle">
         <i class="fas fa-bars"></i>
     </button>
 
-    <!-- Sidebar -->
-    <aside class="sidebar" id="sidebar">
-        <div class="sidebar-toggle" id="sidebarToggle">
-            <i class="fas fa-chevron-left"></i>
-        </div>
+    <div class="dashboard-container">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-toggle" id="sidebarToggle">
+                <i class="fas fa-chevron-left"></i>
+            </div>
 
-        <div class="logo">
-            <div class="logo-icon">
-                <i class="fas fa-store"></i>
+            <div class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-store"></i>
+                </div>
+                <span class="logo-text"><?= htmlspecialchars($shop_name) ?></span>
             </div>
-            <span class="logo-text">RestoFlow</span>
-        </div>
 
-        <nav class="nav-menu">
-            <a href="dashboard.php" class="nav-item">
-                <i class="fas fa-tachometer-alt"></i>
-                <span class="nav-text">Dashboard</span>
-            </a>
-            <a href="menu_management.php" class="nav-item">
-                <i class="fas fa-utensils"></i>
-                <span class="nav-text">Menu Management</span>
-            </a>
-            <a href="orders.php" class="nav-item active">
-                <i class="fas fa-clipboard-list"></i>
-                <span class="nav-text">All Orders</span>
-            </a>
-            <a href="analytics.php" class="nav-item">
-                <i class="fas fa-chart-bar"></i>
-                <span class="nav-text">Analytics</span>
-            </a>
-            <a href="settings.php" class="nav-item">
-                <i class="fas fa-cog"></i>
-                <span class="nav-text">Settings</span>
-            </a>
-        </nav>
+            <nav class="nav-menu">
+                <a href="dashboard.php" class="nav-item">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span class="nav-text">Dashboard</span>
+                </a>
+                <a href="menu.php" class="nav-item">
+                    <i class="fas fa-utensils"></i>
+                    <span class="nav-text">Menu</span>
+                </a>
+                <a href="orders.php" class="nav-item active">
+                    <i class="fas fa-clipboard-list"></i>
+                    <span class="nav-text">Orders</span>
+                </a>
+                <a href="analytics.php" class="nav-item">
+                    <i class="fas fa-chart-bar"></i>
+                    <span class="nav-text">Analytics</span>
+                </a>
+                <a href="settings.php" class="nav-item">
+                    <i class="fas fa-cog"></i>
+                    <span class="nav-text">Settings</span>
+                </a>
+            </nav>
 
-        <div class="user-actions">
-            <div class="user-info">
-                <div class="user-avatar">
-                    <?= strtoupper(substr($_SESSION['shop_name'] ?? 'S', 0, 1)) ?>
-                </div>
-                <div class="user-name"><?= htmlspecialchars($_SESSION['shop_name'] ?? 'Shop Owner') ?></div>
-                <div class="user-role">Owner</div>
-            </div>
-            
-            <button class="action-btn" onclick="location.href='profile.php'">
-                <i class="fas fa-user-circle"></i>
-                <span class="nav-text">Profile</span>
-            </button>
-            
-            <button class="action-btn logout" onclick="location.href='logout.php'">
-                <i class="fas fa-sign-out-alt"></i>
-                <span class="nav-text">Logout</span>
-            </button>
-        </div>
-    </aside>
-
-    <!-- Main Content -->
-    <main class="main-content" id="mainContent">
-        <!-- Top Bar -->
-        <div class="top-bar">
-            <div class="welcome-message">
-                <h1>All Orders</h1>
-                <p>View and manage all customer orders</p>
-            </div>
-        </div>
-
-        <!-- Stats Cards -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-icon" style="background: linear-gradient(135deg, var(--primary), var(--primary-dark));">
-                    <i class="fas fa-receipt"></i>
-                </div>
-                <div class="stat-info">
-                    <h3><?= $total_orders ?></h3>
-                    <p>Total Orders</p>
-                </div>
-            </div>
-            
-            <div class="stat-card">
-                <div class="stat-icon" style="background: linear-gradient(135deg, var(--warning), #f97316);">
-                    <i class="fas fa-clock"></i>
-                </div>
-                <div class="stat-info">
-                    <h3><?= $status_counts['pending'] ?></h3>
-                    <p>Pending Orders</p>
-                </div>
-            </div>
-            
-            <div class="stat-card">
-                <div class="stat-icon" style="background: linear-gradient(135deg, var(--info), #0ea5e9);">
-                    <i class="fas fa-check-circle"></i>
-                </div>
-                <div class="stat-info">
-                    <h3><?= $status_counts['paid'] ?></h3>
-                    <p>Paid Orders</p>
-                </div>
-            </div>
-            
-            <div class="stat-card">
-                <div class="stat-icon" style="background: linear-gradient(135deg, var(--success), #059669);">
-                    <i class="fas fa-check-double"></i>
-                </div>
-                <div class="stat-info">
-                    <h3><?= $status_counts['completed'] ?></h3>
-                    <p>Completed Orders</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Filters Card -->
-        <div class="card">
-            <div class="card-header">
-                <h2 class="card-title">
-                    <i class="fas fa-filter"></i> Filter Orders
-                </h2>
-            </div>
-            
-            <form method="GET" id="filterForm" class="filter-grid">
-                <div class="form-group">
-                    <label class="form-label">Status</label>
-                    <select name="status" class="form-control form-select">
-                        <option value="all" <?= $status_filter === 'all' ? 'selected' : '' ?>>All Status</option>
-                        <option value="pending" <?= $status_filter === 'pending' ? 'selected' : '' ?>>Pending</option>
-                        <option value="paid" <?= $status_filter === 'paid' ? 'selected' : '' ?>>Paid</option>
-                        <option value="completed" <?= $status_filter === 'completed' ? 'selected' : '' ?>>Completed</option>
-                        <option value="cancelled" <?= $status_filter === 'cancelled' ? 'selected' : '' ?>>Cancelled</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">From Date</label>
-                    <input type="date" name="date_from" class="form-control" value="<?= htmlspecialchars($date_from) ?>">
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">To Date</label>
-                    <input type="date" name="date_to" class="form-control" value="<?= htmlspecialchars($date_to) ?>">
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">Search</label>
-                    <input type="text" name="search" class="form-control" placeholder="Search by ID, Table, Token or Item..." value="<?= htmlspecialchars($search_query) ?>">
-                </div>
-                
-                <div class="form-group" style="display: flex; gap: 12px; align-items: flex-end;">
-                    <button type="submit" class="btn btn-primary" style="flex: 1;">
-                        <i class="fas fa-search"></i> Apply Filters
-                    </button>
-                    <button type="button" onclick="resetFilters()" class="btn btn-secondary" style="flex: 1;">
-                        <i class="fas fa-redo"></i> Reset
-                    </button>
-                </div>
-            </form>
-        </div>
-
-        <!-- Orders Table -->
-        <div class="card">
-            <?php if (empty($orders)): ?>
-                <div class="empty-state">
-                    <div class="empty-icon"><i class="fas fa-receipt"></i></div>
-                    <h3>No orders found</h3>
-                    <p>Try adjusting filters or wait for new orders.</p>
-                </div>
-            <?php else: ?>
-                <div class="card-header">
-                    <h2 class="card-title">
-                        <i class="fas fa-list-ul"></i> Recent Orders (<?= $total_orders ?>)
-                    </h2>
-                    <div class="export-buttons">
-                        <button onclick="exportOrders('csv')" class="export-btn">
-                            <i class="fas fa-file-csv"></i> Export CSV
-                        </button>
-                        <button onclick="exportOrders('pdf')" class="export-btn">
-                            <i class="fas fa-file-pdf"></i> Export PDF
-                        </button>
+            <div class="user-actions">
+                <div class="user-info">
+                    <div class="user-avatar">
+                        <?= strtoupper(substr($shop_name, 0, 1)) ?>
                     </div>
+                    <div class="user-name"><?= htmlspecialchars($shop_name) ?></div>
+                    <div class="user-role">Owner</div>
                 </div>
                 
-                <div class="table-container">
-                    <table class="orders-table">
-                        <thead>
-                            <tr>
-                                <th>Order ID</th>
-                                <th>Token / Table</th>
-                                <th>Items</th>
-                                <th>Total</th>
-                                <th>Status</th>
-                                <th>Date & Time</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($orders as $order): ?>
-                                <tr>
-                                    <td data-label="Order ID">
-                                        <strong class="order-id">#<?= $order['order_id'] ?></strong>
-                                    </td>
-
-                                    <!-- NORMAL SIZE Token/Table Display -->
-                                    <td data-label="Token / Table">
-                                        <?php if (!empty($order['token']) && $order['token'] !== '0'): ?>
-                                            <div class="token-display">
-                                                Token: <?= htmlspecialchars($order['token']) ?>
-                                            </div>
-                                        <?php elseif (!empty($order['table_no'])): ?>
-                                            <div class="table-display">
-                                                Table: <?= htmlspecialchars($order['table_no']) ?>
-                                            </div>
-                                        <?php else: ?>
-                                            <span style="color: var(--gray-400);">—</span>
-                                        <?php endif; ?>
-                                    </td>
-
-                                    <td data-label="Items">
-                                        <div style="font-weight: 600; margin-bottom: 4px;">
-                                            <?= $order['item_count'] ?> item(s)
-                                        </div>
-                                        <div class="order-items">
-                                            <?= htmlspecialchars(substr($order['item_summary'] ?? '', 0, 50)) ?>
-                                            <?= strlen($order['item_summary'] ?? '') > 50 ? '...' : '' ?>
-                                        </div>
-                                    </td>
-
-                                    <td data-label="Total">
-                                        <strong class="order-total">₹<?= number_format($order['total'], 2) ?></strong>
-                                    </td>
-
-                                    <td data-label="Status">
-                                        <span class="status-badge status-<?= strtolower($order['status']) ?>">
-                                            <i class="fas fa-<?= 
-                                                $order['status'] === 'pending' ? 'clock' : 
-                                                ($order['status'] === 'paid' ? 'check-circle' : 
-                                                ($order['status'] === 'completed' ? 'check-double' : 'times-circle')) 
-                                            ?>"></i>
-                                            <?= ucfirst($order['status']) ?>
-                                        </span>
-                                        <form method="POST" onsubmit="updateStatus(event, this)" style="margin-top: 8px;">
-                                            <input type="hidden" name="order_id" value="<?= $order['order_id'] ?>">
-                                            <input type="hidden" name="update_status" value="1">
-                                            <select name="new_status" class="status-select" onchange="this.form.submit()">
-                                                <option value="pending" <?= $order['status'] === 'pending' ? 'selected' : '' ?>>Pending</option>
-                                                <option value="paid" <?= $order['status'] === 'paid' ? 'selected' : '' ?>>Paid</option>
-                                                <option value="completed" <?= $order['status'] === 'completed' ? 'selected' : '' ?>>Completed</option>
-                                                <option value="cancelled" <?= $order['status'] === 'cancelled' ? 'selected' : '' ?>>Cancelled</option>
-                                            </select>
-                                        </form>
-                                    </td>
-
-                                    <td data-label="Date & Time" class="order-date">
-                                        <?= date('d M Y', strtotime($order['created_at'])) ?><br>
-                                        <small class="order-time"><?= date('h:i A', strtotime($order['created_at'])) ?></small>
-                                    </td>
-
-                                    <td data-label="Actions">
-                                        <button class="btn btn-primary btn-xs" onclick="viewOrderDetails(<?= $order['order_id'] ?>)">
-                                            <i class="fas fa-eye"></i> View
-                                        </button>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
+                <button class="action-btn" onclick="location.href='profile.php'">
+                    <i class="fas fa-user-circle"></i>
+                    <span class="nav-text">Profile</span>
+                </button>
                 
-                <!-- Simple Pagination -->
-                <div class="pagination">
-                    <button class="page-btn" onclick="location.href='?page=1'">
-                        <i class="fas fa-angle-double-left"></i>
-                    </button>
-                    <button class="page-btn active">1</button>
-                    <button class="page-btn">2</button>
-                    <button class="page-btn">3</button>
-                    <button class="page-btn">
-                        <i class="fas fa-angle-double-right"></i>
-                    </button>
+                <button class="action-btn logout" onclick="location.href='logout.php'">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span class="nav-text">Logout</span>
+                </button>
+            </div>
+        </aside>
+
+        <main class="main-content" id="mainContent">
+            <div class="top-bar">
+                <div class="welcome-message">
+                    <h1>All Orders</h1>
+                    <p>Manage and track customer orders</p>
                 </div>
-            <?php endif; ?>
-        </div>
+                <div class="live-indicator">
+                    <span>LIVE</span>
+                    <small>Auto-refresh</small>
+                </div>
+            </div>
 
-    </main>
-</div>
+            <!-- Stats Pills -->
+            <div class="stats-pills">
+                <div class="stat-pill active" onclick="filterOrders('all')">
+                    <i class="fas fa-layer-group"></i>
+                    <span><?= $total_orders ?></span>
+                    <small>All</small>
+                </div>
+                <div class="stat-pill" onclick="filterOrders('pending')" style="color: var(--warning);">
+                    <i class="fas fa-clock"></i>
+                    <span><?= $status_counts['pending'] ?></span>
+                    <small>Pending</small>
+                </div>
+                <div class="stat-pill" onclick="filterOrders('paid')" style="color: var(--info);">
+                    <i class="fas fa-check-circle"></i>
+                    <span><?= $status_counts['paid'] ?></span>
+                    <small>Paid</small>
+                </div>
+                <div class="stat-pill" onclick="filterOrders('completed')" style="color: var(--success);">
+                    <i class="fas fa-check-double"></i>
+                    <span><?= $status_counts['completed'] ?></span>
+                    <small>Done</small>
+                </div>
+                <div class="stat-pill" onclick="filterOrders('cancelled')" style="color: var(--danger);">
+                    <i class="fas fa-times-circle"></i>
+                    <span><?= $status_counts['cancelled'] ?></span>
+                    <small>Cancelled</small>
+                </div>
+            </div>
 
-<!-- Notification Container -->
-<div id="notificationContainer"></div>
+            <!-- Filter Bar -->
+            <div class="filter-bar">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="searchInput" placeholder="Search orders by ID, table, token or items..." 
+                           value="<?= htmlspecialchars($search_query) ?>">
+                </div>
+                <div class="date-filters">
+                    <input type="date" id="dateFrom" value="<?= htmlspecialchars($date_from) ?>">
+                    <span style="color: var(--text-secondary);">to</span>
+                    <input type="date" id="dateTo" value="<?= htmlspecialchars($date_to) ?>">
+                </div>
+                <button class="clear-btn" onclick="clearFilters()">
+                    <i class="fas fa-redo"></i> Reset
+                </button>
+            </div>
 
-<script>
-// Sidebar Toggle
-const sidebar = document.getElementById('sidebar');
-const sidebarToggle = document.getElementById('sidebarToggle');
-const mainContent = document.getElementById('mainContent');
-const mobileToggle = document.getElementById('mobileToggle');
+            <!-- Orders Grid -->
+            <div class="orders-grid" id="ordersGrid">
+                <?php if (empty($orders)): ?>
+                    <div class="empty-state">
+                        <div class="empty-icon">
+                            <i class="fas fa-receipt"></i>
+                        </div>
+                        <h3 class="empty-title">No orders found</h3>
+                        <p class="empty-subtitle">Try adjusting your filters or wait for new orders</p>
+                    </div>
+                <?php else: ?>
+                    <?php foreach ($orders as $order): ?>
+                        <div class="order-card" data-order-id="<?= $order['order_id'] ?>" data-status="<?= $order['status'] ?>">
+                            <div class="order-header">
+                                <div class="order-id">#<?= $order['order_id'] ?></div>
+                                <div class="order-time">
+                                    <?= date('d M Y', strtotime($order['created_at'])) ?><br>
+                                    <?= date('h:i A', strtotime($order['created_at'])) ?>
+                                </div>
+                            </div>
+                            
+                            <div class="order-body">
+                                <div class="order-meta">
+                                    <?php if (!empty($order['token']) && $order['token'] !== '0'): ?>
+                                        <div class="meta-badge">
+                                            <i class="fas fa-hashtag"></i>
+                                            Token <?= htmlspecialchars($order['token']) ?>
+                                        </div>
+                                    <?php endif; ?>
+                                    <?php if (!empty($order['table_no'])): ?>
+                                        <div class="meta-badge" style="background: rgba(59, 130, 246, 0.1); color: #1D4ED8;">
+                                            <i class="fas fa-chair"></i>
+                                            Table <?= htmlspecialchars($order['table_no']) ?>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
 
-let isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+                                <div class="order-items">
+                                    <?php 
+                                    $items = explode(', ', $order['item_summary'] ?? '');
+                                    foreach (array_slice($items, 0, 3) as $item): 
+                                        if (empty($item)) continue;
+                                        list($qty, $name) = explode('× ', $item, 2);
+                                    ?>
+                                        <div class="item-row">
+                                            <span class="item-name"><?= htmlspecialchars($name ?? $item) ?></span>
+                                            <span class="item-qty"><?= $qty ?? 1 ?></span>
+                                        </div>
+                                    <?php endforeach; ?>
+                                    <?php if (count($items) > 3): ?>
+                                        <div style="text-align: center; padding-top: 8px; color: var(--text-secondary); font-size: 12px; font-weight: 600;">
+                                            +<?= count($items) - 3 ?> more items
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
 
-function updateSidebar() {
-    if (isCollapsed) {
-        sidebar.classList.add('collapsed');
-        mainContent.classList.add('expanded');
-        sidebarToggle.innerHTML = '<i class="fas fa-chevron-right"></i>';
-    } else {
-        sidebar.classList.remove('collapsed');
-        mainContent.classList.remove('expanded');
-        sidebarToggle.innerHTML = '<i class="fas fa-chevron-left"></i>';
-    }
-}
+                                <div class="order-footer">
+                                    <div class="order-total">
+                                        <small>Total</small>
+                                        ₹<?= number_format($order['total'], 0) ?>
+                                    </div>
+                                    <select class="status-select status-<?= $order['status'] ?>" 
+                                            onchange="updateStatus(<?= $order['order_id'] ?>, this.value)"
+                                            data-current="<?= $order['status'] ?>">
+                                        <option value="pending" <?= $order['status'] === 'pending' ? 'selected' : '' ?>>⏳ Pending</option>
+                                        <option value="paid" <?= $order['status'] === 'paid' ? 'selected' : '' ?>>💳 Paid</option>
+                                        <option value="completed" <?= $order['status'] === 'completed' ? 'selected' : '' ?>>✅ Completed</option>
+                                        <option value="cancelled" <?= $order['status'] === 'cancelled' ? 'selected' : '' ?>>❌ Cancelled</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
+        </main>
+    </div>
 
-sidebarToggle.addEventListener('click', () => {
-    isCollapsed = !isCollapsed;
-    localStorage.setItem('sidebarCollapsed', isCollapsed);
-    updateSidebar();
-});
+    <script>
+        // Sidebar Toggle
+        const sidebar = document.getElementById('sidebar');
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const mobileToggle = document.getElementById('mobileToggle');
 
-mobileToggle.addEventListener('click', () => {
-    sidebar.classList.toggle('active');
-});
-
-document.addEventListener('click', (e) => {
-    if (window.innerWidth <= 992 && 
-        !sidebar.contains(e.target) && 
-        !mobileToggle.contains(e.target)) {
-        sidebar.classList.remove('active');
-    }
-});
-
-updateSidebar();
-
-// Notification System
-function showNotification(message, type = 'success') {
-    const container = document.getElementById('notificationContainer');
-    
-    const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
-    
-    const icon = type === 'success' ? 'check-circle' : 'exclamation-circle';
-    
-    notification.innerHTML = `
-        <div class="notification-icon">
-            <i class="fas fa-${icon}"></i>
-        </div>
-        <div class="notification-content">
-            <div class="notification-title">${type === 'success' ? 'Success!' : 'Error!'}</div>
-            <div class="notification-message">${message}</div>
-        </div>
-        <button class="notification-close" onclick="this.parentElement.remove()">
-            <i class="fas fa-times"></i>
-        </button>
-    `;
-    
-    container.appendChild(notification);
-    
-    // Show notification with animation
-    setTimeout(() => notification.classList.add('show'), 10);
-    
-    // Auto remove after 5 seconds
-    setTimeout(() => {
-        if (notification.parentElement) {
-            notification.classList.remove('show');
-            setTimeout(() => notification.remove(), 400);
-        }
-    }, 5000);
-}
-
-// Show notification if there's a message from PHP
-<?php if (!empty($message)): ?>
-    setTimeout(() => {
-        showNotification('<?= addslashes($message) ?>', '<?= $message_type ?>');
-    }, 500);
-<?php endif; ?>
-
-// Update status function
-function updateStatus(event, form) {
-    event.preventDefault();
-    
-    const formData = new FormData(form);
-    const orderId = formData.get('order_id');
-    const newStatus = formData.get('new_status');
-    
-    // Add loading state
-    const select = form.querySelector('select');
-    const originalValue = select.value;
-    select.disabled = true;
-    
-    fetch('', {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(response => response.text())
-    .then(() => {
-        showNotification(`Order status updated to ${newStatus}`, 'success');
-        
-        // Reload the page after 1 second to show updated status
-        setTimeout(() => {
-            location.reload();
-        }, 1000);
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showNotification('Failed to update status. Please try again.', 'error');
-        select.value = originalValue;
-    })
-    .finally(() => {
-        select.disabled = false;
-    });
-}
-
-// View order details
-function viewOrderDetails(orderId) {
-    // In a real application, this would open a modal or navigate to order details page
-    showNotification(`Opening order #${orderId} details...`, 'info');
-    
-    // Simulate API call
-    setTimeout(() => {
-        // For now, just show a message
-        showNotification(`Viewing details for order #${orderId}`, 'info');
-        // You can redirect to a detailed view page:
-        // window.location.href = `order_details.php?id=${orderId}`;
-    }, 500);
-}
-
-// Export orders
-function exportOrders(format) {
-    showNotification(`Exporting orders as ${format.toUpperCase()}...`, 'info');
-    
-    // Build export URL with current filters
-    const form = document.getElementById('filterForm');
-    const formData = new FormData(form);
-    const params = new URLSearchParams(formData);
-    
-    // Simulate export
-    setTimeout(() => {
-        showNotification(`Orders exported successfully as ${format.toUpperCase()}`, 'success');
-        
-        // In a real application, this would trigger a download
-        if (format === 'csv') {
-            window.open(`export_csv.php?${params.toString()}`, '_blank');
-        } else if (format === 'pdf') {
-            window.open(`export_pdf.php?${params.toString()}`, '_blank');
-        }
-    }, 1500);
-}
-
-// Reset filters
-function resetFilters() {
-    const form = document.getElementById('filterForm');
-    form.reset();
-    // Set default dates
-    const today = new Date().toISOString().split('T')[0];
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const dateFrom = thirtyDaysAgo.toISOString().split('T')[0];
-    
-    form.querySelector('input[name="date_from"]').value = dateFrom;
-    form.querySelector('input[name="date_to"]').value = today;
-    form.submit();
-}
-
-// Auto-refresh orders every 30 seconds
-let refreshInterval = setInterval(() => {
-    const currentParams = new URLSearchParams(window.location.search);
-    currentParams.set('refresh', 'true');
-    
-    fetch(`?${currentParams.toString()}`, {
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(response => response.text())
-    .then(html => {
-        // Check if we have any pending orders
-        if (html.includes('status-pending')) {
-            const pendingCount = (html.match(/status-pending/g) || []).length;
-            if (pendingCount > 0 && !document.hidden) {
-                showNotification(`You have ${pendingCount} pending order(s)`, 'info');
+        sidebarToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+            if (sidebar.classList.contains('collapsed')) {
+                sidebarToggle.innerHTML = '<i class="fas fa-chevron-right"></i>';
+            } else {
+                sidebarToggle.innerHTML = '<i class="fas fa-chevron-left"></i>';
             }
-        }
-    })
-    .catch(() => {
-        // Silent fail for auto-refresh
-    });
-}, 30000);
+        });
 
-// Stop auto-refresh when tab is not active
-document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-        clearInterval(refreshInterval);
-    } else {
-        refreshInterval = setInterval(() => {
-            // Refresh logic here
-        }, 30000);
-    }
-});
+        mobileToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('active');
+        });
 
-// Search functionality
-const searchInput = document.querySelector('input[name="search"]');
-let searchTimeout;
-searchInput.addEventListener('input', function() {
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
-        if (this.value.length >= 2 || this.value.length === 0) {
-            document.getElementById('filterForm').submit();
-        }
-    }, 500);
-});
+        document.addEventListener('click', (e) => {
+            if (window.innerWidth <= 992 && 
+                !sidebar.contains(e.target) && 
+                !mobileToggle.contains(e.target)) {
+                sidebar.classList.remove('active');
+            }
+        });
 
-// Keyboard shortcuts
-document.addEventListener('keydown', function(e) {
-    // Ctrl/Cmd + F to focus search
-    if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
-        e.preventDefault();
-        searchInput.focus();
-    }
-    
-    // Escape to close sidebar on mobile
-    if (e.key === 'Escape' && window.innerWidth <= 992) {
-        sidebar.classList.remove('active');
-    }
-});
+        // Notification System
+        function showNotification(message, type = 'success') {
+            const existing = document.querySelector('.notification');
+            if (existing) existing.remove();
 
-// Initialize date pickers with sensible defaults
-document.addEventListener('DOMContentLoaded', function() {
-    const dateInputs = document.querySelectorAll('input[type="date"]');
-    dateInputs.forEach(input => {
-        if (!input.value && input.name === 'date_from') {
-            // Default to 30 days ago
-            const date = new Date();
-            date.setDate(date.getDate() - 30);
-            input.value = date.toISOString().split('T')[0];
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+                <span>${message}</span>
+                <button onclick="this.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                if (notification.parentElement) notification.remove();
+            }, 3000);
         }
-        if (!input.value && input.name === 'date_to') {
-            // Default to today
-            input.value = new Date().toISOString().split('T')[0];
+
+        // Update Status
+        function updateStatus(orderId, newStatus) {
+            const select = document.querySelector(`[data-order-id="${orderId}"] .status-select`);
+            const oldStatus = select.dataset.current;
+            
+            // Visual feedback
+            select.style.pointerEvents = 'none';
+            select.style.opacity = '0.6';
+
+            fetch('', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `action=update_status&order_id=${orderId}&new_status=${encodeURIComponent(newStatus)}`
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification(`Order #${orderId} updated to ${newStatus}`);
+                    select.dataset.current = newStatus;
+                    select.className = `status-select status-${newStatus}`;
+                    
+                    // Update stats after delay
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showNotification(data.error || 'Update failed', 'error');
+                    select.value = oldStatus;
+                }
+            })
+            .catch(() => {
+                showNotification('Network error', 'error');
+                select.value = oldStatus;
+            })
+            .finally(() => {
+                select.style.pointerEvents = '';
+                select.style.opacity = '';
+            });
         }
-    });
-});
-</script>
+
+        // Filter Orders
+        function filterOrders(status) {
+            document.querySelectorAll('.stat-pill').forEach(pill => pill.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            
+            const url = new URL(window.location);
+            if (status === 'all') {
+                url.searchParams.delete('status');
+            } else {
+                url.searchParams.set('status', status);
+            }
+            window.location.href = url.toString();
+        }
+
+        // Clear Filters
+        function clearFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('dateFrom').value = '';
+            document.getElementById('dateTo').value = '';
+            window.location.href = 'orders.php';
+        }
+
+        // Search with debounce
+        let searchTimeout;
+        document.getElementById('searchInput').addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                const url = new URL(window.location);
+                if (this.value) {
+                    url.searchParams.set('search', this.value);
+                } else {
+                    url.searchParams.delete('search');
+                }
+                window.location.href = url.toString();
+            }, 500);
+        });
+
+        // Date filters
+        document.getElementById('dateFrom').addEventListener('change', function() {
+            const url = new URL(window.location);
+            if (this.value) url.searchParams.set('date_from', this.value);
+            else url.searchParams.delete('date_from');
+            window.location.href = url.toString();
+        });
+
+        document.getElementById('dateTo').addEventListener('change', function() {
+            const url = new URL(window.location);
+            if (this.value) url.searchParams.set('date_to', this.value);
+            else url.searchParams.delete('date_to');
+            window.location.href = url.toString();
+        });
+
+        // AUTO REFRESH every 3 seconds
+        let lastOrderCount = document.querySelectorAll('.order-card').length;
+        
+        setInterval(() => {
+            fetch(window.location.href + '?ajax=1')
+                .then(response => response.text())
+                .then(html => {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const newOrders = doc.querySelectorAll('.order-card');
+                    const currentOrders = document.querySelectorAll('.order-card');
+                    
+                    if (newOrders.length !== currentOrders.length) {
+                        // New orders detected!
+                        const newCount = newOrders.length - currentOrders.length;
+                        showNotification(`${newCount} new order(s) received!`, 'success');
+                        
+                        // Highlight new orders
+                        document.getElementById('ordersGrid').innerHTML = doc.getElementById('ordersGrid').innerHTML;
+                        
+                        // Add pulse animation to new orders
+                        document.querySelectorAll('.order-card').forEach((card, index) => {
+                            if (index < newCount) {
+                                card.classList.add('new-order');
+                            }
+                        });
+                        
+                        lastOrderCount = newOrders.length;
+                    }
+                })
+                .catch(() => {});
+        }, 3000);
+
+        // Set default dates
+        if (!document.getElementById('dateFrom').value) {
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            document.getElementById('dateFrom').value = thirtyDaysAgo.toISOString().split('T')[0];
+        }
+        if (!document.getElementById('dateTo').value) {
+            document.getElementById('dateTo').value = new Date().toISOString().split('T')[0];
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'k') {
+                e.preventDefault();
+                document.getElementById('searchInput').focus();
+            }
+            if (e.key === 'Escape') {
+                sidebar.classList.remove('active');
+            }
+        });
+
+        // 3D Tilt effect on cards
+        document.querySelectorAll('.order-card').forEach(card => {
+            card.addEventListener('mousemove', (e) => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                const rotateX = (y - centerY) / 20;
+                const rotateY = (centerX - x) / 20;
+                
+                card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-6px) scale(1.02)`;
+            });
+            
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = '';
+            });
+        });
+    </script>
 </body>
 </html>
