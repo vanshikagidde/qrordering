@@ -9,878 +9,641 @@ if (!$token || !$shop_id || !$order_id) {
     die("Invalid request");
 }
 
-/* Fetch shop name */
-$q = mysqli_query($conn,
-    "SELECT shop_name FROM shops WHERE id='$shop_id'"
-);
-$shop = mysqli_fetch_assoc($q);
+/* Fetch shop name - Using prepared statement */
+$stmt = $conn->prepare("SELECT shop_name FROM shops WHERE id = ?");
+$stmt->bind_param("i", $shop_id);
+$stmt->execute();
+$result = $stmt->get_result();
+$shop = $result->fetch_assoc();
 $shop_name = $shop ? $shop['shop_name'] : 'Unknown Shop';
 
-/* Fetch ordered items */
-$items_q = mysqli_query($conn,
-    "SELECT m.item_name, m.price, oi.quantity
-     FROM order_item oi
-     JOIN menu m ON oi.item_id = m.id
-     WHERE oi.order_id='$order_id'"
-);
+/* Fetch ordered items - Using prepared statement */
+$stmt_items = $conn->prepare("SELECT m.item_name, m.price, oi.quantity 
+    FROM order_item oi 
+    JOIN menu m ON oi.item_id = m.id 
+    WHERE oi.order_id = ?");
+$stmt_items->bind_param("i", $order_id);
+$stmt_items->execute();
+$items_q = $stmt_items->get_result();
 ?>
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Order Confirmed</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<style>
-    :root {
-        --primary: #FF6B6B;
-        --primary-light: #FF8E8E;
-        --primary-dark: #FF4757;
-        --secondary: #4ECDC4;
-        --accent: #FFD166;
-        --dark: #2D3047;
-        --light: #F7F9FC;
-        --gray: #E2E8F0;
-        --text: #333333;
-        --text-light: #718096;
-        --success: #4CAF50;
-        --shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-        --shadow-hover: 0 15px 40px rgba(0, 0, 0, 0.12);
-        --gradient: linear-gradient(135deg, #FF6B6B 0%, #FF8E8E 100%);
-        --gradient-success: linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%);
-        --gradient-dark: linear-gradient(135deg, #2D3047 0%, #3D4166 100%);
-    }
-
-    * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-    }
-
-    body {
-        font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-        color: var(--text);
-        min-height: 100vh;
-        padding: 20px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        overflow-x: hidden;
-    }
-
-    /* Floating Background Elements */
-    .floating-bg {
-        position: fixed;
-        width: 100%;
-        height: 100%;
-        z-index: -1;
-        overflow: hidden;
-    }
-
-    .floating-circle {
-        position: absolute;
-        border-radius: 50%;
-        background: radial-gradient(circle, var(--primary-light) 0%, transparent 70%);
-        opacity: 0.1;
-        animation: float 20s infinite ease-in-out;
-    }
-
-    .circle-1 {
-        width: 300px;
-        height: 300px;
-        top: 10%;
-        left: 5%;
-        animation-delay: 0s;
-    }
-
-    .circle-2 {
-        width: 200px;
-        height: 200px;
-        top: 60%;
-        right: 10%;
-        background: radial-gradient(circle, var(--secondary) 0%, transparent 70%);
-        animation-delay: 5s;
-        animation-duration: 25s;
-    }
-
-    .circle-3 {
-        width: 150px;
-        height: 150px;
-        bottom: 10%;
-        left: 15%;
-        background: radial-gradient(circle, var(--accent) 0%, transparent 70%);
-        animation-delay: 10s;
-        animation-duration: 30s;
-    }
-
-    @keyframes float {
-        0%, 100% { transform: translateY(0) rotate(0deg); }
-        33% { transform: translateY(-30px) rotate(120deg); }
-        66% { transform: translateY(20px) rotate(240deg); }
-    }
-
-    .confirmation-container {
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(10px);
-        border-radius: 24px;
-        padding: 40px;
-        max-width: 500px;
-        width: 100%;
-        box-shadow: var(--shadow);
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        position: relative;
-        overflow: hidden;
-        margin-bottom: 30px;
-        transform: translateY(20px);
-        opacity: 0;
-        animation: slideUp 0.6s forwards 0.3s;
-    }
-
-    @keyframes slideUp {
-        to {
-            transform: translateY(0);
-            opacity: 1;
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Order Confirmed | <?= htmlspecialchars($shop_name) ?></title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #10B981;
+            --primary-dark: #059669;
+            --primary-light: #D1FAE5;
+            --accent: #F59E0B;
+            --dark: #111827;
+            --gray-900: #1F2937;
+            --gray-700: #374151;
+            --gray-500: #6B7280;
+            --gray-300: #D1D5DB;
+            --gray-100: #F3F4F6;
+            --gray-50: #F9FAFB;
+            --white: #FFFFFF;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         }
-    }
 
-    .confirmation-container::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 5px;
-        background: var(--gradient-success);
-    }
-
-    .confirmation-header {
-        text-align: center;
-        margin-bottom: 30px;
-        position: relative;
-    }
-
-    .success-icon {
-        width: 100px;
-        height: 100px;
-        background: var(--gradient-success);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0 auto 25px;
-        color: white;
-        font-size: 48px;
-        animation: successPop 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        box-shadow: 0 10px 30px rgba(76, 175, 80, 0.3);
-    }
-
-    @keyframes successPop {
-        0% { transform: scale(0); opacity: 0; }
-        70% { transform: scale(1.1); }
-        100% { transform: scale(1); opacity: 1; }
-    }
-
-    .confirmation-header h1 {
-        font-size: 2.5rem;
-        font-weight: 700;
-        color: var(--dark);
-        margin-bottom: 10px;
-        background: linear-gradient(to right, var(--primary), var(--success));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-    }
-
-    .confirmation-header p {
-        color: var(--text-light);
-        font-size: 1.2rem;
-    }
-
-    .shop-info {
-        text-align: center;
-        margin-bottom: 30px;
-        padding: 20px;
-        background: linear-gradient(135deg, #f8fafc 0%, #edf2f7 100%);
-        border-radius: 16px;
-        border: 1px solid var(--gray);
-    }
-
-    .shop-name {
-        font-size: 1.8rem;
-        font-weight: 700;
-        color: var(--dark);
-        margin-bottom: 5px;
-    }
-
-    .order-meta {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 25px;
-        background: var(--light);
-        padding: 20px;
-        border-radius: 16px;
-        border: 1px solid var(--gray);
-    }
-
-    .meta-item {
-        text-align: center;
-        flex: 1;
-    }
-
-    .meta-label {
-        display: block;
-        color: var(--text-light);
-        font-size: 0.9rem;
-        margin-bottom: 5px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    .meta-value {
-        font-size: 1.4rem;
-        font-weight: 700;
-        color: var(--dark);
-    }
-
-    .token-display {
-        background: var(--gradient-dark);
-        color: white;
-        padding: 25px;
-        border-radius: 16px;
-        text-align: center;
-        margin-bottom: 30px;
-        position: relative;
-        overflow: hidden;
-        box-shadow: 0 8px 25px rgba(45, 48, 71, 0.2);
-        animation: tokenGlow 3s infinite alternate;
-    }
-
-    @keyframes tokenGlow {
-        from { box-shadow: 0 8px 25px rgba(45, 48, 71, 0.2); }
-        to { box-shadow: 0 8px 25px rgba(45, 48, 71, 0.4), 0 0 30px rgba(45, 48, 71, 0.1); }
-    }
-
-    .token-display::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23ffffff' fill-opacity='0.1' fill-rule='evenodd'/%3E%3C/svg%3E");
-        opacity: 0.3;
-    }
-
-    .token-label {
-        display: block;
-        font-size: 1.1rem;
-        color: rgba(255, 255, 255, 0.9);
-        margin-bottom: 10px;
-    }
-
-    .token-value {
-        font-size: 4rem;
-        font-weight: 800;
-        letter-spacing: 5px;
-        font-family: 'Courier New', monospace;
-        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-    }
-
-    .order-items {
-        margin-bottom: 30px;
-    }
-
-    .items-header {
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: var(--dark);
-        margin-bottom: 20px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-    .items-header i {
-        color: var(--primary);
-    }
-
-    .items-list {
-        background: var(--light);
-        border-radius: 16px;
-        border: 1px solid var(--gray);
-        overflow: hidden;
-    }
-
-    .item-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 18px 25px;
-        border-bottom: 1px dashed var(--gray);
-        transition: all 0.3s ease;
-        opacity: 0;
-        transform: translateX(-20px);
-        animation: slideIn 0.5s forwards;
-    }
-
-    @keyframes slideIn {
-        to {
-            opacity: 1;
-            transform: translateX(0);
-        }
-    }
-
-    .item-row:nth-child(1) { animation-delay: 0.1s; }
-    .item-row:nth-child(2) { animation-delay: 0.2s; }
-    .item-row:nth-child(3) { animation-delay: 0.3s; }
-    .item-row:nth-child(4) { animation-delay: 0.4s; }
-    .item-row:nth-child(5) { animation-delay: 0.5s; }
-    .item-row:nth-child(6) { animation-delay: 0.6s; }
-
-    .item-row:last-child {
-        border-bottom: none;
-    }
-
-    .item-row:hover {
-        background: rgba(255, 255, 255, 0.5);
-        transform: translateX(5px);
-    }
-
-    .item-name {
-        flex: 1;
-        font-weight: 600;
-        color: var(--dark);
-        font-size: 1.1rem;
-    }
-
-    .item-details {
-        text-align: right;
-    }
-
-    .item-quantity {
-        font-size: 1rem;
-        color: var(--text-light);
-        margin-bottom: 5px;
-    }
-
-    .item-price {
-        font-size: 1.2rem;
-        font-weight: 700;
-        color: var(--primary);
-    }
-
-    .line-total {
-        font-size: 0.9rem;
-        color: var(--text-light);
-        margin-top: 5px;
-    }
-
-    .total-section {
-        background: var(--gradient);
-        color: white;
-        padding: 25px;
-        border-radius: 16px;
-        text-align: center;
-        margin-bottom: 25px;
-        box-shadow: 0 8px 25px rgba(255, 107, 107, 0.2);
-    }
-
-    .total-label {
-        font-size: 1.2rem;
-        margin-bottom: 10px;
-        opacity: 0.9;
-    }
-
-    .total-amount {
-        font-size: 3rem;
-        font-weight: 800;
-        letter-spacing: 1px;
-    }
-
-    .instructions {
-        background: linear-gradient(135deg, #f8fafc 0%, #edf2f7 100%);
-        padding: 25px;
-        border-radius: 16px;
-        border: 1px solid var(--gray);
-        margin-bottom: 30px;
-        text-align: center;
-    }
-
-    .instructions h3 {
-        color: var(--dark);
-        margin-bottom: 15px;
-        font-size: 1.3rem;
-    }
-
-    .instruction-steps {
-        display: flex;
-        justify-content: space-around;
-        flex-wrap: wrap;
-        gap: 15px;
-    }
-
-    .step {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        flex: 1;
-        min-width: 120px;
-    }
-
-    .step-icon {
-        width: 50px;
-        height: 50px;
-        background: var(--gradient);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-size: 1.5rem;
-        margin-bottom: 10px;
-    }
-
-    .step-text {
-        font-size: 0.9rem;
-        color: var(--text-light);
-        text-align: center;
-        line-height: 1.4;
-    }
-
-    .action-buttons {
-        display: flex;
-        gap: 15px;
-        margin-top: 20px;
-    }
-
-    .action-btn {
-        flex: 1;
-        padding: 20px;
-        border: none;
-        border-radius: 16px;
-        font-size: 1.2rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 12px;
-        position: relative;
-        overflow: hidden;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-    }
-
-    .action-btn::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-        transition: left 0.7s;
-    }
-
-    .action-btn:hover::before {
-        left: 100%;
-    }
-
-    .action-btn:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-    }
-
-    .action-btn:active {
-        transform: translateY(0);
-    }
-
-    .print-btn {
-        background: var(--gradient-dark);
-        color: white;
-    }
-
-    .home-btn {
-        background: var(--gradient);
-        color: white;
-    }
-
-    /* PRINT ONLY RECEIPT */
-    @media print {
         * {
-            -webkit-print-color-adjust: exact !important;
-            color-adjust: exact !important;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
-            background: white !important;
-            margin: 0 !important;
-            padding: 0 !important;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(180deg, var(--gray-50) 0%, var(--gray-100) 100%);
+            color: var(--dark);
+            min-height: 100vh;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
         }
 
-        /* Hide background elements */
-        .floating-bg,
-        .floating-bg * {
-            display: none !important;
+        /* Success Animation Overlay */
+        .success-overlay {
+            position: fixed;
+            inset: 0;
+            background: var(--primary);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeOut 0.5s ease-out 1.5s forwards;
+            pointer-events: none;
         }
 
-        /* Hide action buttons */
-        .action-buttons {
-            display: none !important;
+        @keyframes fadeOut {
+            to { opacity: 0; visibility: hidden; }
         }
 
-        /* Show and style the receipt */
-        .confirmation-container {
-            display: block !important;
-            position: static !important;
-            background: white !important;
-            backdrop-filter: none !important;
-            border-radius: 0 !important;
-            box-shadow: none !important;
-            border: none !important;
-            animation: none !important;
-            transform: none !important;
-            opacity: 1 !important;
-            margin: 0 !important;
-            padding: 20px !important;
-            max-width: 100% !important;
-            width: 100% !important;
-            color: black !important;
-            overflow: visible !important;
+        .success-check {
+            width: 80px;
+            height: 80px;
+            background: var(--white);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: scaleIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
-        .confirmation-container::before {
-            display: none !important;
+        .success-check i {
+            font-size: 40px;
+            color: var(--primary);
+            animation: checkPop 0.4s ease-out 0.3s both;
         }
 
-        /* Ensure all text in receipt is visible and black */
-        .confirmation-container,
-        .confirmation-container *,
-        .confirmation-container h1,
-        .confirmation-container h3,
-        .confirmation-container p,
-        .confirmation-container span,
-        .confirmation-container div {
-            color: black !important;
-            background: white !important;
-            box-shadow: none !important;
-            text-shadow: none !important;
-            border-color: black !important;
+        @keyframes scaleIn {
+            from { transform: scale(0); }
+            to { transform: scale(1); }
         }
 
-        .success-icon {
-            width: 70px !important;
-            height: 70px !important;
-            font-size: 32px !important;
-            color: black !important;
+        @keyframes checkPop {
+            from { transform: scale(0) rotate(-45deg); }
+            to { transform: scale(1) rotate(0); }
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 24px 16px;
+            animation: slideUp 0.6s ease-out 0.3s both;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--primary-light);
+            color: var(--primary-dark);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 16px;
+        }
+
+        .status-badge::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            background: var(--primary);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--dark);
+            margin-bottom: 8px;
+            letter-spacing: -0.025em;
+        }
+
+        .subtitle {
+            color: var(--gray-500);
+            font-size: 14px;
+        }
+
+        /* Card Component */
+        .card {
+            background: var(--white);
+            border-radius: 16px;
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+            margin-bottom: 16px;
+        }
+
+        /* Shop Header */
+        .shop-header {
+            background: linear-gradient(135deg, var(--gray-900) 0%, var(--gray-700) 100%);
+            color: var(--white);
+            padding: 20px;
+            text-align: center;
+        }
+
+        .shop-icon {
+            width: 48px;
+            height: 48px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 12px;
+            font-size: 24px;
+            backdrop-filter: blur(10px);
+        }
+
+        .shop-name {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .order-time {
+            font-size: 13px;
+            opacity: 0.8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        /* Token Section */
+        .token-section {
+            padding: 24px 20px;
+            text-align: center;
+            background: linear-gradient(180deg, var(--primary-light) 0%, var(--white) 100%);
+            border-bottom: 2px dashed var(--gray-300);
+        }
+
+        .token-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--gray-500);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
         }
 
         .token-value {
-            font-size: 3rem !important;
-            color: black !important;
-            background: white !important;
+            font-size: 48px;
+            font-weight: 800;
+            color: var(--dark);
+            font-family: 'Courier New', monospace;
+            letter-spacing: 4px;
+            line-height: 1;
+            margin-bottom: 8px;
+        }
+
+        .token-hint {
+            font-size: 13px;
+            color: var(--gray-500);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        /* Order Meta */
+        .order-meta {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1px;
+            background: var(--gray-100);
+        }
+
+        .meta-item {
+            background: var(--white);
+            padding: 16px;
+            text-align: center;
+        }
+
+        .meta-label {
+            font-size: 11px;
+            color: var(--gray-500);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        /* Items Section */
+        .items-section {
+            padding: 20px;
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title i {
+            color: var(--gray-500);
+        }
+
+        .item-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--gray-100);
+            animation: fadeInLeft 0.4s ease-out both;
+        }
+
+        .item-row:nth-child(1) { animation-delay: 0.1s; }
+        .item-row:nth-child(2) { animation-delay: 0.2s; }
+        .item-row:nth-child(3) { animation-delay: 0.3s; }
+        .item-row:nth-child(4) { animation-delay: 0.4s; }
+        .item-row:nth-child(5) { animation-delay: 0.5s; }
+
+        @keyframes fadeInLeft {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .item-row:last-child {
+            border-bottom: none;
+        }
+
+        .item-info {
+            flex: 1;
+        }
+
+        .item-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 4px;
+        }
+
+        .item-quantity {
+            font-size: 13px;
+            color: var(--gray-500);
+        }
+
+        .item-price-group {
+            text-align: right;
+        }
+
+        .item-unit-price {
+            font-size: 13px;
+            color: var(--gray-500);
+        }
+
+        .item-total {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        /* Total Section */
+        .total-section {
+            background: var(--gray-50);
+            padding: 16px 20px;
+            border-top: 2px solid var(--gray-100);
+        }
+
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .total-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--gray-700);
         }
 
         .total-amount {
-            font-size: 2.5rem !important;
-            color: black !important;
-            background: white !important;
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--primary-dark);
         }
 
-        /* Ensure gradients don't print */
-        [style*="gradient"] {
-            background: white !important;
-            color: black !important;
+        /* Instructions */
+        .instructions-card {
+            background: var(--white);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            margin-bottom: 16px;
         }
-    }
 
-    /* Responsive */
-    @media (max-width: 600px) {
-        body {
-            padding: 15px;
+        .instructions-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 16px;
+            text-align: center;
         }
-        
-        .confirmation-container {
-            padding: 30px 25px;
+
+        .steps {
+            display: flex;
+            justify-content: space-between;
+            position: relative;
         }
-        
-        .success-icon {
-            width: 80px;
-            height: 80px;
-            font-size: 36px;
+
+        .steps::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 20%;
+            right: 20%;
+            height: 2px;
+            background: var(--gray-200);
+            z-index: 0;
         }
-        
-        .confirmation-header h1 {
-            font-size: 2rem;
-        }
-        
-        .token-value {
-            font-size: 3rem;
-            letter-spacing: 3px;
-        }
-        
-        .order-meta {
-            flex-direction: column;
-            gap: 15px;
-        }
-        
-        .action-buttons {
-            flex-direction: column;
-        }
-        
-        .instruction-steps {
+
+        .step {
+            display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 20px;
+            flex: 1;
+            position: relative;
+            z-index: 1;
         }
-        
-        .step {
-            min-width: 100%;
+
+        .step-number {
+            width: 40px;
+            height: 40px;
+            background: var(--white);
+            border: 2px solid var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 8px;
         }
-    }
-</style>
+
+        .step-label {
+            font-size: 11px;
+            color: var(--gray-500);
+            text-align: center;
+            line-height: 1.3;
+            max-width: 80px;
+        }
+
+        /* Actions */
+        .actions {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px 24px;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--dark);
+            color: var(--white);
+        }
+
+        .btn-primary:hover {
+            background: var(--gray-900);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-secondary {
+            background: var(--white);
+            color: var(--gray-700);
+            border: 1px solid var(--gray-300);
+        }
+
+        .btn-secondary:hover {
+            background: var(--gray-50);
+            border-color: var(--gray-400);
+        }
+
+        /* Print Styles */
+        @media print {
+            body { background: white; }
+            .success-overlay, .actions, .instructions-card { display: none; }
+            .container { max-width: 100%; padding: 0; }
+            .card { box-shadow: none; border: 1px solid #ddd; }
+        }
+
+        /* Mobile Optimizations */
+        @media (max-width: 380px) {
+            .token-value { font-size: 36px; letter-spacing: 2px; }
+            h1 { font-size: 20px; }
+            .step-label { font-size: 10px; }
+        }
+    </style>
 </head>
-
 <body>
-    <!-- Floating Background Elements -->
-    <div class="floating-bg">
-        <div class="floating-circle circle-1"></div>
-        <div class="floating-circle circle-2"></div>
-        <div class="floating-circle circle-3"></div>
+    <!-- Success Animation -->
+    <div class="success-overlay">
+        <div class="success-check">
+            <i class="fas fa-check"></i>
+        </div>
     </div>
 
-    <!-- Main Confirmation Container -->
-    <div class="confirmation-container print-area">
-        <div class="confirmation-header">
-            <div class="success-icon">
-                <i class="fas fa-check"></i>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="status-badge">Order Confirmed</div>
+            <h1>Thank You!</h1>
+            <p class="subtitle">Your order has been placed successfully</p>
+        </div>
+
+        <!-- Main Card -->
+        <div class="card">
+            <!-- Shop Header -->
+            <div class="shop-header">
+                <div class="shop-icon">
+                    <i class="fas fa-store"></i>
+                </div>
+                <div class="shop-name"><?= htmlspecialchars($shop_name) ?></div>
+                <div class="order-time">
+                    <i class="far fa-clock"></i>
+                    <span><?= date('M j, Y • h:i A') ?></span>
+                </div>
             </div>
-            <h1>Order Confirmed!</h1>
-            <p>Your order has been placed successfully</p>
-        </div>
 
-        <div class="shop-info">
-            <div class="shop-name">🏪 <?= htmlspecialchars($shop_name) ?></div>
-            <p style="color: var(--text-light); margin-top: 5px;">
-                <i class="fas fa-clock"></i> Order placed at <?= date('h:i A') ?>
-            </p>
-        </div>
-
-        <div class="order-meta">
-            <div class="meta-item">
-                <span class="meta-label">Order ID</span>
-                <span class="meta-value">#<?= htmlspecialchars($order_id) ?></span>
+            <!-- Token Section -->
+            <div class="token-section">
+                <div class="token-label">Your Order Token</div>
+                <div class="token-value"><?= htmlspecialchars(strtoupper($token)) ?></div>
+                <div class="token-hint">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Show this when collecting</span>
+                </div>
             </div>
-            <div class="meta-item">
-                <span class="meta-label">Status</span>
-                <span class="meta-value" style="color: var(--success);">✅ Confirmed</span>
+
+            <!-- Order Meta -->
+            <div class="order-meta">
+                <div class="meta-item">
+                    <div class="meta-label">Order ID</div>
+                    <div class="meta-value">#<?= htmlspecialchars($order_id) ?></div>
+                </div>
+                <div class="meta-item">
+                    <div class="meta-label">Status</div>
+                    <div class="meta-value" style="color: var(--primary);">Confirmed</div>
+                </div>
             </div>
-        </div>
 
-        <div class="token-display">
-            <span class="token-label">Your Order Token</span>
-            <div class="token-value"><?= htmlspecialchars($token) ?></div>
-            <p style="margin-top: 15px; opacity: 0.9; font-size: 1rem;">
-                <i class="fas fa-info-circle"></i> Show this token when collecting your order
-            </p>
-        </div>
-
-        <div class="order-items">
-            <h3 class="items-header">
-                <i class="fas fa-receipt"></i> Order Summary
-            </h3>
-            <div class="items-list">
-                <?php 
-                mysqli_data_seek($items_q, 0); // Reset pointer
-                $subtotal = 0;
-                $animation_delay = 0;
-                while($item = mysqli_fetch_assoc($items_q)): 
-                    $line_total = $item['price'] * $item['quantity'];
-                    $subtotal += $line_total;
-                    $animation_delay += 0.1;
-                ?>
-                    <div class="item-row" style="animation-delay: <?= $animation_delay ?>s">
-                        <div class="item-name"><?= htmlspecialchars($item['item_name']) ?></div>
-                        <div class="item-details">
-                            <div class="item-quantity">Quantity: x<?= $item['quantity'] ?></div>
-                            <div class="item-price">₹<?= number_format($item['price'], 0) ?></div>
-                            <?php if ($item['quantity'] > 1): ?>
-                                <div class="line-total">Line total: ₹<?= number_format($line_total, 0) ?></div>
-                            <?php endif; ?>
+            <!-- Items Section -->
+            <div class="items-section">
+                <div class="section-title">
+                    <i class="fas fa-receipt"></i>
+                    Order Summary
+                </div>
+                <div class="items-list">
+                    <?php 
+                    $subtotal = 0;
+                    while($item = $items_q->fetch_assoc()): 
+                        $line_total = $item['price'] * $item['quantity'];
+                        $subtotal += $line_total;
+                    ?>
+                        <div class="item-row">
+                            <div class="item-info">
+                                <div class="item-name"><?= htmlspecialchars($item['item_name']) ?></div>
+                                <div class="item-quantity">Qty: <?= $item['quantity'] ?></div>
+                            </div>
+                            <div class="item-price-group">
+                                <div class="item-unit-price">₹<?= number_format($item['price'], 0) ?> each</div>
+                                <div class="item-total">₹<?= number_format($line_total, 0) ?></div>
+                            </div>
                         </div>
-                    </div>
-                <?php endwhile; 
-                $total = $subtotal;
-                ?>
+                    <?php endwhile; ?>
+                </div>
+            </div>
+
+            <!-- Total -->
+            <div class="total-section">
+                <div class="total-row">
+                    <span class="total-label">Total Amount</span>
+                    <span class="total-amount">₹<?= number_format($subtotal, 0) ?></span>
+                </div>
             </div>
         </div>
 
-        <div class="total-section">
-            <div class="total-label">Total Amount</div>
-            <div class="total-amount">₹<?= number_format($total, 0) ?></div>
-        </div>
-
-        <div class="instructions">
-            <h3><i class="fas fa-info-circle"></i> What Happens Next?</h3>
-            <div class="instruction-steps">
+        <!-- Instructions -->
+        <div class="instructions-card">
+            <div class="instructions-title">What happens next?</div>
+            <div class="steps">
                 <div class="step">
-                    <div class="step-icon">
-                        <i class="fas fa-clock"></i>
-                    </div>
-                    <div class="step-text">Wait for kitchen to prepare your order</div>
+                    <div class="step-number">1</div>
+                    <div class="step-label">Kitchen prepares</div>
                 </div>
                 <div class="step">
-                    <div class="step-icon">
-                        <i class="fas fa-bullhorn"></i>
-                    </div>
-                    <div class="step-text">We'll announce your token when ready</div>
+                    <div class="step-number">2</div>
+                    <div class="step-label">Token called</div>
                 </div>
                 <div class="step">
-                    <div class="step-icon">
-                        <i class="fas fa-box"></i>
-                    </div>
-                    <div class="step-text">Show token and collect your order</div>
+                    <div class="step-number">3</div>
+                    <div class="step-label">Collect order</div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Action Buttons -->
-    <div class="action-buttons">
-        <button class="action-btn print-btn" onclick="printReceipt()">
-            <i class="fas fa-print"></i> Print Receipt
-        </button>
-        <button class="action-btn home-btn" onclick="window.location.href='index.php'">
-            <i class="fas fa-home"></i> Back to Home
-        </button>
+        <!-- Actions -->
+        <div class="actions">
+            <button class="btn btn-primary" onclick="window.print()">
+                <i class="fas fa-print"></i>
+                Print Receipt
+            </button>
+            <button class="btn btn-secondary" onclick="window.location.href='index.php'">
+                <i class="fas fa-arrow-left"></i>
+                Back to Menu
+            </button>
+        </div>
     </div>
 
     <script>
-        // Add celebration confetti
-        document.addEventListener('DOMContentLoaded', function() {
-            createConfetti();
-            
-            // Add subtle animation to token
-            const token = document.querySelector('.token-value');
-            setInterval(() => {
-                token.style.transform = 'scale(1.02)';
+        // Prevent zoom on double tap
+        document.addEventListener('dblclick', function(event) {
+            event.preventDefault();
+        }, { passive: false });
+
+        // Add haptic feedback simulation
+        document.querySelectorAll('.btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                this.style.transform = 'scale(0.98)';
                 setTimeout(() => {
-                    token.style.transform = 'scale(1)';
-                }, 300);
-            }, 3000);
+                    this.style.transform = '';
+                }, 100);
+            });
         });
-
-        function createConfetti() {
-            const colors = ['#FF6B6B', '#4ECDC4', '#FFD166', '#2D3047', '#4CAF50'];
-            const container = document.querySelector('body');
-            
-            for (let i = 0; i < 50; i++) {
-                const confetti = document.createElement('div');
-                confetti.style.position = 'fixed';
-                confetti.style.width = Math.random() * 10 + 5 + 'px';
-                confetti.style.height = Math.random() * 10 + 5 + 'px';
-                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-                confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
-                confetti.style.left = Math.random() * 100 + 'vw';
-                confetti.style.top = '-20px';
-                confetti.style.opacity = '0.8';
-                confetti.style.zIndex = '9999';
-                confetti.style.pointerEvents = 'none';
-                container.appendChild(confetti);
-                
-                // Animate confetti
-                const animation = confetti.animate([
-                    { transform: 'translateY(0) rotate(0deg)', opacity: 1 },
-                    { transform: `translateY(${window.innerHeight}px) rotate(${Math.random() * 720}deg)`, opacity: 0 }
-                ], {
-                    duration: Math.random() * 3000 + 1000,
-                    easing: 'cubic-bezier(0.215, 0.610, 0.355, 1)'
-                });
-                
-                animation.onfinish = () => confetti.remove();
-            }
-        }
-
-        function printReceipt() {
-            // Create a new window for printing
-            const printWindow = window.open('', '_blank', 'width=600,height=800');
-            
-            // Get the receipt content
-            const receiptContent = document.querySelector('.confirmation-container').outerHTML;
-            
-            // Create print-specific HTML
-            const printHTML = `
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <title>Order Receipt</title>
-                    <style>
-                        body {
-                            font-family: Arial, sans-serif;
-                            margin: 0;
-                            padding: 20px;
-                            background: white;
-                            color: black;
-                        }
-                        .confirmation-container {
-                            background: white;
-                            color: black;
-                            padding: 20px;
-                            max-width: 100%;
-                            box-shadow: none;
-                            border: none;
-                        }
-                        .confirmation-container * {
-                            color: black !important;
-                            background: white !important;
-                        }
-                        .success-icon {
-                            width: 60px;
-                            height: 60px;
-                            font-size: 28px;
-                            color: black;
-                        }
-                        .token-value {
-                            font-size: 2.5rem;
-                            color: black;
-                            font-weight: bold;
-                        }
-                        .total-amount {
-                            font-size: 2rem;
-                            color: black;
-                            font-weight: bold;
-                        }
-                        .item-row {
-                            margin: 10px 0;
-                            padding: 5px 0;
-                            border-bottom: 1px solid #ccc;
-                        }
-                        .item-name {
-                            font-weight: bold;
-                        }
-                        .item-price {
-                            float: right;
-                        }
-                        @media print {
-                            body { margin: 0; }
-                        }
-                    </style>
-                </head>
-                <body>
-                    ${receiptContent}
-                </body>
-                </html>
-            `;
-            
-            printWindow.document.write(printHTML);
-            printWindow.document.close();
-            
-            // Wait for content to load then print
-            printWindow.onload = function() {
-                printWindow.print();
-                printWindow.close();
-            };
-        }
     </script>
 </body>
 </html>

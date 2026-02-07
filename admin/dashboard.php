@@ -56,27 +56,29 @@ $top_shops = $conn->query($top_shops_query)->fetch_all(MYSQLI_ASSOC);
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
     <style>
-        /* === YOUR ORIGINAL DASHBOARD STYLES - PRESERVED & EXTENDED === */
+        /* === ORANGE THEME DASHBOARD STYLES === */
         :root {
-            --primary: #7c3aed;
-            --primary-dark: #6d28d9;
-            --secondary: #10b981;
-            --dark: #1f2937;
-            --darker: #111827;
-            --gray-100: #f9fafb;
-            --gray-200: #e5e7eb;
-            --gray-300: #d1d5db;
-            --gray-600: #4b5563;
-            --gray-700: #374151;
-            --light: #ffffff;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --info: #3b82f6;
-            --danger: #ef4444;
-            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            --primary: #F6921E;
+            --primary-dark: #E07E0A;
+            --primary-light: #FF8C42;
+            --secondary: #FFF5F0;
+            --accent: #FFAD87;
+            --dark: #2D3436;
+            --darker: #1A1A1A;
+            --gray-100: #FFF5F0;
+            --gray-200: #FFE8E0;
+            --gray-300: #FFD4C4;
+            --gray-600: #6C5CE7;
+            --gray-700: #2D3436;
+            --light: #FFFFFF;
+            --success: #00B894;
+            --warning: #FDCB6E;
+            --info: #74B9FF;
+            --danger: #FF5252;
+            --shadow-sm: 0 1px 2px 0 rgba(255, 107, 53, 0.05);
+            --shadow: 0 4px 6px -1px rgba(255, 107, 53, 0.1), 0 2px 4px -1px rgba(255, 107, 53, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(255, 107, 53, 0.1), 0 4px 6px -2px rgba(255, 107, 53, 0.05);
+            --shadow-xl: 0 20px 25px -5px rgba(255, 107, 53, 0.15), 0 10px 10px -5px rgba(255, 107, 53, 0.1);
             --radius: 12px;
             --radius-lg: 16px;
             --sidebar-width: 260px;
@@ -87,7 +89,7 @@ $top_shops = $conn->query($top_shops_query)->fetch_all(MYSQLI_ASSOC);
         * { margin:0; padding:0; box-sizing:border-box; }
         body {
             font-family: 'Inter', 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+            background: linear-gradient(135deg, #FFF5F0 0%, #FFFFFF 100%);
             color: var(--dark);
             min-height: 100vh;
             overflow-x: hidden;
@@ -95,10 +97,10 @@ $top_shops = $conn->query($top_shops_query)->fetch_all(MYSQLI_ASSOC);
 
         .dashboard-container { display: flex; min-height: 100vh; position: relative; }
 
-        /* Sidebar - exact same as your shop owner pages */
+        /* Sidebar - Orange Theme */
         .sidebar {
             width: var(--sidebar-width);
-            background: linear-gradient(180deg, var(--darker) 0%, #1e1b4b 100%);
+            background: linear-gradient(180deg, var(--darker) 0%, #2D3436 100%);
             color: white;
             position: fixed;
             height: 100vh;
@@ -116,11 +118,11 @@ $top_shops = $conn->query($top_shops_query)->fetch_all(MYSQLI_ASSOC);
         .sidebar.collapsed .user-info { display: none; }
 
         .logo { display: flex; align-items: center; gap: 12px; padding: 0 8px 24px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 24px; }
-        .logo-icon { width: 40px; height: 40px; background: linear-gradient(135deg, var(--primary), #a855f7); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
-        .logo-text { font-size: 1.5rem; font-weight: 700; background: linear-gradient(135deg, #ffffff, #c7d2fe); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .logo-icon { width: 40px; height: 40px; background: linear-gradient(135deg, var(--primary), var(--primary-light)); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+        .logo-text { font-size: 1.5rem; font-weight: 700; background: linear-gradient(135deg, #ffffff, var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 
         .sidebar-toggle { position: absolute; right: -12px; top: 24px; width: 24px; height: 24px; background: var(--light); border: 2px solid var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--primary); font-size: 12px; transition: var(--transition); z-index: 101; }
-        .sidebar-toggle:hover { transform: scale(1.1); box-shadow: var(--shadow); }
+        .sidebar-toggle:hover { transform: scale(1.1); }
 
         .nav-menu { flex: 1; display: flex; flex-direction: column; gap: 8px; }
         .nav-item { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 10px; color: rgba(255,255,255,0.8); text-decoration: none; transition: var(--transition); }
@@ -131,25 +133,25 @@ $top_shops = $conn->query($top_shops_query)->fetch_all(MYSQLI_ASSOC);
 
         .user-actions { border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; margin-top: auto; display: flex; flex-direction: column; gap: 8px; }
         .user-info { padding: 0 8px 16px; text-align: center; }
-        .user-avatar { width: 40px; height: 40px; background: linear-gradient(135deg, #8b5cf6, #ec4899); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; margin: 0 auto 8px; }
+        .user-avatar { width: 40px; height: 40px; background: linear-gradient(135deg, var(--primary), var(--primary-light)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; margin: 0 auto 8px; }
         .user-name { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
         .user-role { font-size: 12px; color: rgba(255,255,255,0.6); }
         .action-btn { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 10px; background: transparent; border: none; color: rgba(255,255,255,0.8); font-family: inherit; font-size: 15px; cursor: pointer; transition: var(--transition); width: 100%; text-align: left; }
         .action-btn:hover { background: rgba(255,255,255,0.1); color: white; }
-        .action-btn.logout { color: #fca5a5; }
-        .action-btn.logout:hover { background: rgba(239,68,68,0.2); }
+        .action-btn.logout { color: #FFAD87; }
+        .action-btn.logout:hover { background: rgba(255, 82, 82, 0.2); }
 
         /* Main Content */
         .main-content { flex: 1; margin-left: var(--sidebar-width); padding: 24px; transition: var(--transition); }
         .main-content.expanded { margin-left: var(--sidebar-collapsed); }
 
-        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; background: var(--light); padding: 20px 24px; border-radius: var(--radius-lg); box-shadow: var(--shadow); }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; background: var(--light); padding: 20px 24px; border-radius: var(--radius-lg); box-shadow: var(--shadow); border: 1px solid var(--gray-200); }
         .welcome-message h1 { font-size: 1.75rem; font-weight: 700; color: var(--darker); margin-bottom: 4px; }
         .welcome-message p { color: var(--gray-600); font-size: 14px; }
 
         /* Stats Grid */
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 32px; }
-        .stat-card { background: var(--light); padding: 24px; border-radius: var(--radius-lg); box-shadow: var(--shadow); display: flex; align-items: center; gap: 20px; transition: var(--transition); border: 1px solid var(--gray-100); position: relative; overflow: hidden; }
+        .stat-card { background: var(--light); padding: 24px; border-radius: var(--radius-lg); box-shadow: var(--shadow); display: flex; align-items: center; gap: 20px; transition: var(--transition); border: 1px solid var(--gray-200); position: relative; overflow: hidden; }
         .stat-card::before { content: ''; position: absolute; top: 0; left: 0; width: 6px; height: 100%; background: linear-gradient(to bottom, var(--primary), var(--primary-dark)); }
         .stat-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-lg); }
         .stat-icon { width: 56px; height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: white; }
@@ -157,21 +159,21 @@ $top_shops = $conn->query($top_shops_query)->fetch_all(MYSQLI_ASSOC);
         .stat-info p { color: var(--gray-600); font-size: 14px; font-weight: 500; }
 
         /* Recent Orders & Top Shops */
-        .card { background: var(--light); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 24px; margin-bottom: 32px; border: 1px solid var(--gray-100); }
-        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid var(--gray-100); }
+        .card { background: var(--light); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 24px; margin-bottom: 32px; border: 1px solid var(--gray-200); }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid var(--gray-200); }
         .card-title { font-size: 1.5rem; font-weight: 700; color: var(--darker); display: flex; align-items: center; gap: 12px; }
         .card-title i { color: var(--primary); }
 
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 14px 16px; text-align: left; border-bottom: 1px solid var(--gray-200); }
         th { background: var(--gray-100); font-weight: 600; color: var(--gray-700); text-transform: uppercase; font-size: 0.85rem; }
-        tr:hover { background: var(--gray-50); }
+        tr:hover { background: var(--gray-100); }
 
         .status-badge { padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; }
-        .status-pending  { background: #fef3c7; color: #d97706; }
-        .status-paid     { background: #d1fae5; color: #065f46; }
-        .status-completed { background: #dbeafe; color: #1e40af; }
-        .status-cancelled { background: #fee2e2; color: #991b1b; }
+        .status-pending  { background: #FFF5E6; color: #E07E0A; }
+        .status-paid     { background: #E6F7F4; color: #00B894; }
+        .status-completed { background: #E6F0FF; color: #0984E3; }
+        .status-cancelled { background: #FFE6E6; color: #FF5252; }
 
         .empty-state { text-align: center; padding: 80px 20px; color: var(--gray-600); }
         .empty-icon { font-size: 5rem; color: var(--gray-300); margin-bottom: 24px; }
@@ -206,7 +208,7 @@ $top_shops = $conn->query($top_shops_query)->fetch_all(MYSQLI_ASSOC);
         <i class="fas fa-bars"></i>
     </button>
 
-    <!-- Sidebar - Identical to your shop owner pages -->
+    <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-toggle" id="sidebarToggle">
             <i class="fas fa-chevron-left"></i>
@@ -216,7 +218,7 @@ $top_shops = $conn->query($top_shops_query)->fetch_all(MYSQLI_ASSOC);
             <div class="logo-icon">
                 <i class="fas fa-store"></i>
             </div>
-            <span class="logo-text">RestoFlow Admin</span>
+            <span class="logo-text"> Admin</span>
         </div>
 
         <nav class="nav-menu">
@@ -236,10 +238,10 @@ $top_shops = $conn->query($top_shops_query)->fetch_all(MYSQLI_ASSOC);
                 <i class="fas fa-users"></i>
                 <span class="nav-text">Users & Shops</span>
             </a>
-            <a href="admin_settings.php" class="nav-item">
-                <i class="fas fa-cog"></i>
-                <span class="nav-text">Settings</span>
-            </a>
+            <a href="admin_analytics.php" class="nav-item">
+    <i class="fas fa-chart-line"></i>
+    <span class="nav-text">Analytics</span>
+</a>
         </nav>
 
         <div class="user-actions">
@@ -275,7 +277,7 @@ $top_shops = $conn->query($top_shops_query)->fetch_all(MYSQLI_ASSOC);
         <!-- Stats Overview -->
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="stat-icon" style="background: linear-gradient(135deg, #8b5cf6, var(--primary));">
+                <div class="stat-icon" style="background: linear-gradient(135deg, var(--primary), var(--primary-light));">
                     <i class="fas fa-shop"></i>
                 </div>
                 <div class="stat-info">
@@ -285,7 +287,7 @@ $top_shops = $conn->query($top_shops_query)->fetch_all(MYSQLI_ASSOC);
             </div>
 
             <div class="stat-card">
-                <div class="stat-icon" style="background: linear-gradient(135deg, var(--success), var(--secondary));">
+                <div class="stat-icon" style="background: linear-gradient(135deg, var(--success), #00D2A0);">
                     <i class="fas fa-check-circle"></i>
                 </div>
                 <div class="stat-info">
@@ -295,7 +297,7 @@ $top_shops = $conn->query($top_shops_query)->fetch_all(MYSQLI_ASSOC);
             </div>
 
             <div class="stat-card">
-                <div class="stat-icon" style="background: linear-gradient(135deg, #3b82f6, var(--info));">
+                <div class="stat-icon" style="background: linear-gradient(135deg, var(--info), #74B9FF);">
                     <i class="fas fa-receipt"></i>
                 </div>
                 <div class="stat-info">
@@ -305,7 +307,7 @@ $top_shops = $conn->query($top_shops_query)->fetch_all(MYSQLI_ASSOC);
             </div>
 
             <div class="stat-card">
-                <div class="stat-icon" style="background: linear-gradient(135deg, #10b981, #059669);">
+                <div class="stat-icon" style="background: linear-gradient(135deg, var(--success), #00B894);">
                     <i class="fas fa-rupee-sign"></i>
                 </div>
                 <div class="stat-info">
@@ -403,7 +405,7 @@ $top_shops = $conn->query($top_shops_query)->fetch_all(MYSQLI_ASSOC);
 </div>
 
 <script>
-// Exact same sidebar toggle script as your other pages
+// Sidebar toggle functionality
 const sidebar = document.getElementById('sidebar');
 const sidebarToggle = document.getElementById('sidebarToggle');
 const mainContent = document.getElementById('mainContent');

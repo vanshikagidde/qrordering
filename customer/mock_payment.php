@@ -24,28 +24,21 @@ foreach ($cart as $menu_id => $qty) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Payment</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>Payment - Secure Checkout</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
     <style>
         :root {
-            --primary: #FF6B6B;
-            --primary-light: #FF8E8E;
-            --primary-dark: #FF4757;
-            --secondary: #4ECDC4;
-            --accent: #FFD166;
-            --dark: #2D3047;
-            --light: #F7F9FC;
-            --gray: #E2E8F0;
-            --text: #333333;
-            --text-light: #718096;
-            --success: #4CAF50;
-            --error: #FF5252;
-            --shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-            --shadow-hover: 0 15px 40px rgba(0, 0, 0, 0.12);
-            --gradient: linear-gradient(135deg, #FF6B6B 0%, #FF8E8E 100%);
-            --gradient-success: linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%);
-            --gradient-error: linear-gradient(135deg, #FF5252 0%, #FF8A80 100%);
-            --gradient-dark: linear-gradient(135deg, #2D3047 0%, #3D4166 100%);
+            --primary: #F97316;
+            --primary-light: #FB923C;
+            --primary-dark: #EA580C;
+            --success: #10B981;
+            --error: #EF4444;
+            --text: #1E293B;
+            --text-light: #64748B;
+            --border: #E2E8F0;
+            --bg: #F8FAFC;
         }
 
         * {
@@ -55,89 +48,108 @@ foreach ($cart as $menu_id => $qty) {
         }
 
         body {
-            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: #ffffff;
             color: var(--text);
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
             padding: 20px;
+            position: relative;
             overflow-x: hidden;
         }
 
-        /* Floating Background Elements */
-        .floating-bg {
+        /* Animated Background Shapes */
+        .bg-shapes {
             position: fixed;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
-            z-index: -1;
+            pointer-events: none;
+            z-index: 0;
             overflow: hidden;
         }
 
-        .floating-circle {
+        .shape {
             position: absolute;
             border-radius: 50%;
-            background: radial-gradient(circle, var(--primary-light) 0%, transparent 70%);
-            opacity: 0.1;
-            animation: float 20s infinite ease-in-out;
+            filter: blur(60px);
+            opacity: 0.4;
         }
 
-        .circle-1 {
-            width: 300px;
-            height: 300px;
-            top: 10%;
-            left: 5%;
-            animation-delay: 0s;
+        .shape-1 {
+            width: 350px;
+            height: 350px;
+            background: rgba(249, 115, 22, 0.15);
+            top: -100px;
+            right: -100px;
+            animation: float1 20s infinite ease-in-out;
         }
 
-        .circle-2 {
+        .shape-2 {
+            width: 280px;
+            height: 280px;
+            background: rgba(251, 146, 60, 0.12);
+            bottom: 10%;
+            left: -80px;
+            animation: float2 25s infinite ease-in-out;
+        }
+
+        .shape-3 {
             width: 200px;
             height: 200px;
-            top: 60%;
-            right: 10%;
-            background: radial-gradient(circle, var(--secondary) 0%, transparent 70%);
-            animation-delay: 5s;
-            animation-duration: 25s;
+            background: rgba(234, 88, 12, 0.1);
+            top: 40%;
+            right: 15%;
+            animation: float3 18s infinite ease-in-out;
         }
 
-        .circle-3 {
-            width: 150px;
-            height: 150px;
-            bottom: 10%;
-            left: 15%;
-            background: radial-gradient(circle, var(--accent) 0%, transparent 70%);
-            animation-delay: 10s;
-            animation-duration: 30s;
+        .shape-4 {
+            width: 300px;
+            height: 300px;
+            background: rgba(251, 146, 60, 0.08);
+            bottom: -100px;
+            right: 20%;
+            animation: float4 22s infinite ease-in-out;
         }
 
-        @keyframes float {
-            0%, 100% { transform: translateY(0) rotate(0deg); }
-            33% { transform: translateY(-30px) rotate(120deg); }
-            66% { transform: translateY(20px) rotate(240deg); }
+        @keyframes float1 {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -50px) scale(1.1); }
+            66% { transform: translate(-20px, 30px) scale(0.9); }
         }
 
+        @keyframes float2 {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(40px, -30px) scale(1.15); }
+        }
+
+        @keyframes float3 {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(-30px, 40px) scale(0.95); }
+            66% { transform: translate(20px, -20px) scale(1.05); }
+        }
+
+        @keyframes float4 {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            50% { transform: translate(-30px, -50px) rotate(180deg); }
+        }
+
+        /* Payment Container */
         .payment-container {
             background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(20px);
             border-radius: 24px;
             padding: 40px;
             max-width: 450px;
             width: 100%;
-            box-shadow: var(--shadow);
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(249, 115, 22, 0.1);
             position: relative;
+            z-index: 1;
             overflow: hidden;
-            transform: translateY(20px);
-            opacity: 0;
-            animation: slideUp 0.6s forwards 0.3s;
-        }
-
-        @keyframes slideUp {
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
         }
 
         .payment-container::before {
@@ -145,64 +157,81 @@ foreach ($cart as $menu_id => $qty) {
             position: absolute;
             top: 0;
             left: 0;
-            width: 100%;
+            right: 0;
             height: 5px;
-            background: var(--gradient);
+            background: linear-gradient(90deg, var(--primary), var(--primary-light), var(--primary));
+            background-size: 200% 100%;
+            animation: shimmer 3s infinite linear;
         }
 
+        @keyframes shimmer {
+            0% { background-position: 100% 0; }
+            100% { background-position: -100% 0; }
+        }
+
+        /* Header */
         .payment-header {
             text-align: center;
             margin-bottom: 30px;
-            position: relative;
         }
 
         .payment-icon {
             width: 80px;
             height: 80px;
-            background: var(--gradient);
-            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            border-radius: 20px;
             display: flex;
             align-items: center;
             justify-content: center;
             margin: 0 auto 20px;
             color: white;
-            font-size: 32px;
-            animation: pulse 2s infinite;
-            box-shadow: 0 8px 20px rgba(255, 107, 107, 0.3);
+            font-size: 36px;
+            box-shadow: 0 10px 30px rgba(249, 115, 22, 0.3);
+            animation: iconPulse 2s infinite;
+            position: relative;
+            overflow: hidden;
         }
 
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
+        .payment-icon::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, transparent, rgba(255,255,255,0.3));
+        }
+
+        @keyframes iconPulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 10px 30px rgba(249, 115, 22, 0.3); }
+            50% { transform: scale(1.05); box-shadow: 0 15px 40px rgba(249, 115, 22, 0.4); }
         }
 
         .payment-header h2 {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--dark);
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: var(--text);
             margin-bottom: 8px;
         }
 
         .payment-header p {
             color: var(--text-light);
-            font-size: 1.1rem;
+            font-size: 1rem;
         }
 
+        /* Order Details */
         .order-details {
-            background: linear-gradient(135deg, #f8fafc 0%, #edf2f7 100%);
+            background: linear-gradient(135deg, #FFF7ED 0%, #FFF7ED 100%);
             border-radius: 16px;
-            padding: 25px;
-            margin-bottom: 30px;
-            border: 1px solid var(--gray);
+            padding: 24px;
+            margin-bottom: 25px;
+            border: 1px solid rgba(249, 115, 22, 0.15);
         }
 
         .detail-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
-            padding-bottom: 15px;
-            border-bottom: 1px dashed var(--gray);
+            margin-bottom: 14px;
+            padding-bottom: 14px;
+            border-bottom: 1px dashed rgba(249, 115, 22, 0.2);
         }
 
         .detail-row:last-child {
@@ -213,215 +242,254 @@ foreach ($cart as $menu_id => $qty) {
 
         .detail-label {
             color: var(--text-light);
-            font-size: 1rem;
+            font-size: 0.95rem;
+            font-weight: 500;
         }
 
         .detail-value {
-            font-weight: 600;
-            color: var(--dark);
-            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text);
+            font-size: 1rem;
         }
 
         .order-id {
             font-family: 'Courier New', monospace;
-            background: var(--dark);
+            background: var(--text);
             color: white;
-            padding: 8px 15px;
+            padding: 6px 14px;
             border-radius: 30px;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             letter-spacing: 1px;
         }
 
-        .total-amount {
-            font-size: 2.5rem;
-            font-weight: 800;
-            color: var(--primary);
+        /* Total Amount */
+        .total-section {
             text-align: center;
-            margin: 25px 0;
-            background: linear-gradient(to right, var(--primary), var(--primary-light));
+            margin: 30px 0;
+            padding: 25px;
+            background: white;
+            border-radius: 16px;
+            border: 2px solid rgba(249, 115, 22, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .total-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--primary-light));
+        }
+
+        .total-label {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .total-amount {
+            font-size: 3rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            animation: amountGlow 3s infinite alternate;
+            line-height: 1;
         }
 
-        @keyframes amountGlow {
-            from { filter: drop-shadow(0 0 5px rgba(255, 107, 107, 0.3)); }
-            to { filter: drop-shadow(0 0 10px rgba(255, 107, 107, 0.5)); }
-        }
-
+        /* Payment Buttons */
         .payment-options {
             display: flex;
             flex-direction: column;
-            gap: 15px;
-            margin-bottom: 25px;
+            gap: 12px;
+            margin-bottom: 20px;
         }
 
         .payment-btn {
-            padding: 20px;
+            padding: 18px 24px;
             border: none;
-            border-radius: 16px;
-            font-size: 1.2rem;
-            font-weight: 600;
+            border-radius: 14px;
+            font-size: 1.1rem;
+            font-weight: 700;
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 12px;
             position: relative;
             overflow: hidden;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
         }
 
         .payment-btn::before {
             content: '';
             position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            transition: left 0.7s;
+            inset: 0;
+            background: linear-gradient(135deg, transparent, rgba(255,255,255,0.3), transparent);
+            transform: translateX(-100%);
+            transition: transform 0.6s;
         }
 
         .payment-btn:hover::before {
-            left: 100%;
-        }
-
-        .payment-btn:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-        }
-
-        .payment-btn:active {
-            transform: translateY(0);
+            transform: translateX(100%);
         }
 
         .payment-btn.success {
-            background: var(--gradient-success);
+            background: linear-gradient(135deg, var(--success), #059669);
             color: white;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+        }
+
+        .payment-btn.success:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
         }
 
         .payment-btn.fail {
-            background: var(--gradient-error);
+            background: linear-gradient(135deg, var(--error), #DC2626);
             color: white;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+        }
+
+        .payment-btn.fail:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
         }
 
         .payment-btn i {
-            font-size: 1.4rem;
+            font-size: 1.3rem;
         }
 
-        /* Animation Container */
-        .animation-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(5px);
-            border-radius: 24px;
+        /* Security Note */
+        .security-note {
+            text-align: center;
+            color: var(--text-light);
+            font-size: 0.85rem;
             display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+        }
+
+        .security-note i {
+            color: var(--success);
+        }
+
+        /* Animation Overlay */
+        .animation-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            display: none;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            opacity: 0;
-            visibility: hidden;
-            transform: scale(0.9);
-            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             z-index: 10;
             padding: 40px;
             text-align: center;
         }
 
-        .animation-container.active {
-            opacity: 1;
-            visibility: visible;
-            transform: scale(1);
+        .animation-overlay.active {
+            display: flex;
+            animation: fadeIn 0.3s ease;
         }
 
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Spinner */
         .spinner {
-            width: 80px;
-            height: 80px;
-            border: 6px solid var(--gray);
-            border-top: 6px solid var(--primary);
+            width: 70px;
+            height: 70px;
+            border: 5px solid rgba(249, 115, 22, 0.2);
+            border-top-color: var(--primary);
             border-radius: 50%;
             animation: spin 1s linear infinite;
             margin-bottom: 25px;
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            to { transform: rotate(360deg); }
         }
 
-        .success-animation {
-            width: 100px;
-            height: 100px;
-            background: var(--gradient-success);
+        /* Success/Error Animations */
+        .status-icon {
+            width: 90px;
+            height: 90px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             margin-bottom: 25px;
-            animation: successPop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        .error-animation {
-            width: 100px;
-            height: 100px;
-            background: var(--gradient-error);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 25px;
-            animation: errorShake 0.6s ease-in-out;
-        }
-
-        @keyframes successPop {
-            0% { transform: scale(0); opacity: 0; }
-            70% { transform: scale(1.1); }
-            100% { transform: scale(1); opacity: 1; }
-        }
-
-        @keyframes errorShake {
-            0%, 100% { transform: translateX(0); }
-            10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
-            20%, 40%, 60%, 80% { transform: translateX(10px); }
-        }
-
-        .success-animation i,
-        .error-animation i {
+            font-size: 40px;
             color: white;
-            font-size: 48px;
+            display: none;
+        }
+
+        .status-icon.success {
+            background: linear-gradient(135deg, var(--success), #059669);
+            animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .status-icon.error {
+            background: linear-gradient(135deg, var(--error), #DC2626);
+            animation: shake 0.5s ease;
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0); }
+            80% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-10px); }
+            40%, 80% { transform: translateX(10px); }
+        }
+
+        .status-title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--text);
+            margin-bottom: 10px;
         }
 
         .status-message {
-            font-size: 1.8rem;
-            font-weight: 700;
-            color: var(--dark);
-            margin-bottom: 15px;
-        }
-
-        .status-submessage {
             color: var(--text-light);
-            font-size: 1.1rem;
+            font-size: 1rem;
             max-width: 300px;
             line-height: 1.5;
         }
 
-        .processing .payment-btn {
-            opacity: 0.5;
-            pointer-events: none;
+        /* Confetti */
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: var(--primary);
+            animation: confettiFall 3s ease-out forwards;
+        }
+
+        @keyframes confettiFall {
+            0% { transform: translateY(-100px) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(400px) rotate(720deg); opacity: 0; }
         }
 
         /* Responsive */
         @media (max-width: 480px) {
-            body {
-                padding: 15px;
-            }
-
             .payment-container {
                 padding: 30px 25px;
             }
@@ -429,194 +497,161 @@ foreach ($cart as $menu_id => $qty) {
             .payment-icon {
                 width: 70px;
                 height: 70px;
-                font-size: 28px;
+                font-size: 30px;
             }
 
             .payment-header h2 {
-                font-size: 1.8rem;
-            }
-
-            .order-details {
-                padding: 20px;
+                font-size: 1.5rem;
             }
 
             .total-amount {
-                font-size: 2.2rem;
+                font-size: 2.5rem;
             }
 
             .payment-btn {
-                padding: 18px;
-                font-size: 1.1rem;
-            }
-
-            .success-animation,
-            .error-animation {
-                width: 80px;
-                height: 80px;
-            }
-
-            .success-animation i,
-            .error-animation i {
-                font-size: 36px;
+                padding: 16px;
+                font-size: 1rem;
             }
         }
     </style>
 </head>
 
 <body>
-    <!-- Floating Background Elements -->
-    <div class="floating-bg">
-        <div class="floating-circle circle-1"></div>
-        <div class="floating-circle circle-2"></div>
-        <div class="floating-circle circle-3"></div>
+    <!-- Animated Background -->
+    <div class="bg-shapes">
+        <div class="shape shape-1"></div>
+        <div class="shape shape-2"></div>
+        <div class="shape shape-3"></div>
+        <div class="shape shape-4"></div>
     </div>
 
     <div class="payment-container" id="paymentContainer">
+        <!-- Header -->
         <div class="payment-header">
             <div class="payment-icon">
-                <i class="fas fa-credit-card"></i>
+                <i class="fas fa-shield-alt"></i>
             </div>
             <h2>Secure Payment</h2>
-            <p>Complete your order with a mock payment</p>
+            <p>Complete your order safely</p>
         </div>
 
+        <!-- Order Details -->
         <div class="order-details">
             <div class="detail-row">
                 <span class="detail-label">Order ID</span>
                 <span class="detail-value order-id"><?= htmlspecialchars($_SESSION['order']['order_id'] ?? 'N/A') ?></span>
             </div>
             <div class="detail-row">
-                <span class="detail-label">Items in Cart</span>
+                <span class="detail-label">Items</span>
                 <span class="detail-value"><?= array_sum($cart) ?> items</span>
             </div>
             <div class="detail-row">
-                <span class="detail-label">Payment Method</span>
-                <span class="detail-value">Mock Gateway</span>
+                <span class="detail-label">Table</span>
+                <span class="detail-value"><?= htmlspecialchars($_SESSION['order']['table_no'] ?? 'N/A') ?></span>
             </div>
         </div>
 
-        <div class="total-amount">₹<?= number_format($total, 0) ?></div>
+        <!-- Total -->
+        <div class="total-section">
+            <div class="total-label">Total Amount</div>
+            <div class="total-amount">₹<?= number_format($total, 0) ?></div>
+        </div>
 
+        <!-- Buttons -->
         <div class="payment-options">
-            <button class="payment-btn success" onclick="initiatePayment('success')">
+            <button class="payment-btn success" onclick="processPayment('success')">
                 <i class="fas fa-check-circle"></i>
-                Complete Payment
+                Pay Now
             </button>
-            <button class="payment-btn fail" onclick="initiatePayment('failed')">
+            <button class="payment-btn fail" onclick="processPayment('failed')">
                 <i class="fas fa-times-circle"></i>
-                Simulate Failure
+                Test Failure
             </button>
         </div>
 
-        <p style="text-align: center; color: var(--text-light); font-size: 0.9rem; margin-top: 20px;">
-            <i class="fas fa-shield-alt"></i> This is a mock payment gateway for demonstration purposes
-        </p>
+        <div class="security-note">
+            <i class="fas fa-lock"></i>
+            <span>Mock payment gateway for demo purposes</span>
+        </div>
 
-        <!-- Animation Container -->
-        <div class="animation-container" id="animationContainer">
+        <!-- Animation Overlay -->
+        <div class="animation-overlay" id="animationOverlay">
             <div class="spinner" id="spinner"></div>
-            <div class="success-animation" id="successAnimation" style="display: none;">
+            <div class="status-icon success" id="successIcon">
                 <i class="fas fa-check"></i>
             </div>
-            <div class="error-animation" id="errorAnimation" style="display: none;">
+            <div class="status-icon error" id="errorIcon">
                 <i class="fas fa-times"></i>
             </div>
-            <div class="status-message" id="statusMessage"></div>
-            <div class="status-submessage" id="statusSubmessage"></div>
+            <div class="status-title" id="statusTitle">Processing</div>
+            <div class="status-message" id="statusMessage">Please wait...</div>
         </div>
     </div>
 
     <script>
-        function initiatePayment(status) {
-            const container = document.getElementById('paymentContainer');
-            const animationContainer = document.getElementById('animationContainer');
+        function processPayment(status) {
+            const overlay = document.getElementById('animationOverlay');
             const spinner = document.getElementById('spinner');
-            const successAnimation = document.getElementById('successAnimation');
-            const errorAnimation = document.getElementById('errorAnimation');
-            const statusMessage = document.getElementById('statusMessage');
-            const statusSubmessage = document.getElementById('statusSubmessage');
+            const successIcon = document.getElementById('successIcon');
+            const errorIcon = document.getElementById('errorIcon');
+            const title = document.getElementById('statusTitle');
+            const message = document.getElementById('statusMessage');
 
-            // Hide buttons and show loading
-            container.classList.add('processing');
-            animationContainer.classList.add('active');
+            // Show overlay
+            overlay.classList.add('active');
             
-            // Show processing state
+            // Reset states
             spinner.style.display = 'block';
-            successAnimation.style.display = 'none';
-            errorAnimation.style.display = 'none';
-            statusMessage.textContent = 'Processing Payment';
-            statusSubmessage.textContent = 'Please wait while we process your transaction...';
+            successIcon.style.display = 'none';
+            errorIcon.style.display = 'none';
+            title.textContent = 'Processing Payment';
+            message.textContent = 'Please wait while we secure your transaction...';
 
-            // Simulate payment processing delay
+            // Simulate processing
             setTimeout(() => {
                 spinner.style.display = 'none';
                 
                 if (status === 'success') {
-                    successAnimation.style.display = 'flex';
-                    statusMessage.textContent = 'Payment Successful!';
-                    statusSubmessage.textContent = 'Your order has been confirmed. Redirecting...';
+                    successIcon.style.display = 'flex';
+                    title.textContent = 'Payment Successful!';
+                    message.textContent = 'Your order has been confirmed. Redirecting...';
                     
-                    // Add confetti effect
+                    // Create confetti
                     createConfetti();
                     
-                    // Redirect after animation
+                    // Redirect
                     setTimeout(() => {
                         window.location.href = "payment_callback.php?status=success";
                     }, 2000);
                 } else {
-                    errorAnimation.style.display = 'flex';
-                    statusMessage.textContent = 'Payment Failed';
-                    statusSubmessage.textContent = 'The transaction could not be completed. Please try again.';
+                    errorIcon.style.display = 'flex';
+                    title.textContent = 'Payment Failed';
+                    message.textContent = 'Transaction could not be completed. Please try again.';
                     
-                    // Reset after animation
+                    // Close after delay
                     setTimeout(() => {
-                        animationContainer.classList.remove('active');
-                        container.classList.remove('processing');
-                    }, 3000);
+                        overlay.classList.remove('active');
+                    }, 2500);
                 }
-            }, 2500); // 2.5s processing time
+            }, 2000);
         }
 
         function createConfetti() {
-            const colors = ['#FF6B6B', '#4ECDC4', '#FFD166', '#2D3047'];
-            const container = document.querySelector('.animation-container');
+            const colors = ['#F97316', '#FB923C', '#10B981', '#3B82F6', '#F59E0B'];
+            const container = document.getElementById('animationOverlay');
             
-            for (let i = 0; i < 100; i++) {
+            for (let i = 0; i < 50; i++) {
                 const confetti = document.createElement('div');
-                confetti.style.position = 'absolute';
-                confetti.style.width = Math.random() * 10 + 5 + 'px';
-                confetti.style.height = Math.random() * 10 + 5 + 'px';
-                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-                confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+                confetti.className = 'confetti';
                 confetti.style.left = Math.random() * 100 + '%';
-                confetti.style.top = '-20px';
-                confetti.style.opacity = '0.8';
-                confetti.style.transform = `rotate(${Math.random() * 360}deg)`;
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.animationDelay = Math.random() * 0.5 + 's';
+                confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
                 container.appendChild(confetti);
                 
-                // Animate confetti
-                const animation = confetti.animate([
-                    { transform: `translateY(0) rotate(0deg)`, opacity: 1 },
-                    { transform: `translateY(${window.innerHeight}px) rotate(${Math.random() * 720}deg)`, opacity: 0 }
-                ], {
-                    duration: Math.random() * 2000 + 1000,
-                    easing: 'cubic-bezier(0.215, 0.610, 0.355, 1)'
-                });
-                
-                animation.onfinish = () => confetti.remove();
+                setTimeout(() => confetti.remove(), 3000);
             }
         }
-
-        // Add slight entrance animation delay for elements
-        document.addEventListener('DOMContentLoaded', function() {
-            const rows = document.querySelectorAll('.detail-row');
-            rows.forEach((row, index) => {
-                row.style.animationDelay = `${0.1 * index}s`;
-                row.style.opacity = '0';
-                row.style.transform = 'translateX(-20px)';
-                row.style.animation = `slideUp 0.5s forwards ${0.3 + 0.1 * index}s`;
-            });
-        });
     </script>
 </body>
 </html>
