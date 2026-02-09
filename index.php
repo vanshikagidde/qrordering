@@ -1214,6 +1214,7 @@
         
         <div class="nav-buttons">
             <a href="/shopowner/login.php" class="btn btn-outline">Login</a>
+             <a href="/admin/login.php" class="btn btn-outline">Admin Login</a>
             <a href="/shopowner/register.php" class="btn btn-primary">Register</a>
         </div>
         
@@ -1232,6 +1233,7 @@
         <a href="#testimonials">Testimonials</a>
         <a href="/shopowner/login.php" class="btn btn-outline">Login</a>
         <a href="/shopowner/register.php" class="btn btn-primary">Register</a>
+        <a href="/admin/login.php" class="btn btn-outline">Admin Login</a>
     </div>
 
     <!-- Hero Section -->

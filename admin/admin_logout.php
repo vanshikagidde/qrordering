@@ -24,7 +24,7 @@ header("X-Frame-Options: DENY");
 header("X-Content-Type-Options: nosniff");
 
 // Redirect to login with success flag
-header("Location: admin_login.php?logout=success");
+header("Location: login.php?logout=success");
 exit;
 ?>
 

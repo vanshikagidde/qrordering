@@ -4,7 +4,7 @@ session_start();
 include "../config/db.php";
 
 if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
-    header("Location: admin_login.php");
+    header("Location: login.php");
     exit;
 }
 

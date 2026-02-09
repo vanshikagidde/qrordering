@@ -4,7 +4,7 @@ session_start();
 include "../config/db.php";
 
 if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
-    header("Location: admin_login.php");
+    header("Location: login.php");
     exit;
 }
 
@@ -333,7 +333,7 @@ foreach ($orders as $o) {
         </div>
 
         <nav class="nav-menu">
-            <a href="admin_dashboard.php" class="nav-item">
+            <a href="dashboard.php" class="nav-item">
                 <i class="fas fa-tachometer-alt"></i>
                 <span class="nav-text">Dashboard</span>
             </a>
