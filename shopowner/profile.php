@@ -20,6 +20,7 @@ $stmt->execute();
 $shop = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 
+
 // Handle profile update
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['update_profile'])) {
@@ -57,6 +58,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $update_stmt->close();
         }
         $check_stmt->close();
+       
+}
+ if (isset($_POST['toggle_shop'])) {
+    $new_status = $shop['is_open'] ? 0 : 1;
+
+    $stmt = $conn->prepare("UPDATE shops SET is_open=? WHERE id=?");
+    $stmt->bind_param("ii", $new_status, $shop_id);
+    $stmt->execute();
+    $stmt->close();
+
+    header("Location: profile.php");
+    exit;
+}
     }
     
     // Handle password change
@@ -88,7 +102,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message_type = 'error';
         }
     }
-}
 
 // Get statistics
 $stats = [];
@@ -1071,6 +1084,13 @@ $qr_url = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" . url
                     </div>
                 </div>
             </div>
+            <span class="status-badge-large <?= $shop['is_open'] ? '' : 'pending' ?>">
+    <i class="fas fa-circle"></i>
+    <?= $shop['is_open'] ? 'Open' : 'Closed' ?>
+</span>
+<br>
+<br>
+<br>
 
             <!-- Stats -->
             <div class="stats-grid">
@@ -1255,6 +1275,12 @@ $qr_url = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" . url
                             </div>
                         </div>
                     </div>
+                    <form method="POST">
+    <button type="submit" name="toggle_shop" class="btn <?= $shop['is_open'] ? 'btn-danger' : 'btn-primary' ?>" style="width:100%; margin-top:10px;">
+        <i class="fas <?= $shop['is_open'] ? 'fa-door-closed' : 'fa-door-open' ?>"></i>
+        <?= $shop['is_open'] ? 'Close Shop' : 'Open Shop' ?>
+    </button>
+</form>
 
                     <!-- Danger Zone -->
                     <div class="danger-zone">

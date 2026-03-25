@@ -4,7 +4,18 @@ include "../config/db.php";
 // Get shop name from URL
 $shop_name = isset($_GET['shop']) ? mysqli_real_escape_string($conn, $_GET['shop']) : '';
 $table_no = isset($_GET['table']) ? htmlspecialchars($_GET['table']) : 'Table 1';
+$stmt = $conn->prepare("SELECT is_open FROM shops WHERE shop_name=?");
+$stmt->bind_param("s", $_GET['shop']);
+$stmt->execute();
+$res = $stmt->get_result()->fetch_assoc();
 
+if (!$res || $res['is_open'] == 0) {
+    echo "<h2 style='text-align:center; margin-top:50px; color:red;'>
+            🚫 Shop is currently closed<br><br>
+            Please come back later
+          </h2>";
+    exit;
+}
 // Get shop info
 $shop_q = mysqli_query($conn, "SELECT * FROM shops WHERE shop_name='$shop_name'");
 if (mysqli_num_rows($shop_q) == 0) {

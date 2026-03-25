@@ -755,7 +755,7 @@ $avg_price = $total_items > 0 ? array_sum(array_column($menu_items, 'price')) / 
                                         </td>
                                         <td data-label="Actions" class="actions-cell">
                                             <div class="actions-group">
-                                                <button type="button" class="btn btn-success btn-xs" onclick="editItem(<?= $item['id'] ?>, '<?= htmlspecialchars(addslashes($item['item_name']), ENT_QUOTES) ?>', <?= $item['price'] ?>)">
+                                                <button type="button" class="btn btn-success btn-xs" onclick="editItem(<?= $item['id'] ?>, `<?= htmlspecialchars($item['item_name']) ?>`, <?= $item['price'] ?>)"
                                                     <i class="fas fa-edit"></i> Edit
                                                 </button>
                                                 <form method="post" style="display: inline;" onsubmit="return confirm('Delete this item?');">
@@ -872,37 +872,36 @@ $avg_price = $total_items > 0 ? array_sum(array_column($menu_items, 'price')) / 
         setTimeout(() => showNotification("<?= addslashes($message) ?>", "<?= $message_type ?>"), 500);
         <?php endif; ?>
 
-        // Inline Edit
         function editItem(id, name, price) {
-            const row = document.getElementById('row-' + id);
-            if (!row) return;
+    const row = document.getElementById('row-' + id);
+    if (!row) return;
+
+    const cells = row.cells;
+
+    // Put full form inside ACTION cell only
+    cells[2].innerHTML = `
+        <form method="post">
+            <input type="hidden" name="item_id" value="${id}">
             
-            // Remove any existing edit rows
-            document.querySelectorAll('.edit-form-row').forEach(r => {
-                const originalId = r.getAttribute('data-original-id');
-                location.reload(); // Simple refresh to restore
-            });
-            
-            const cells = row.cells;
-            cells[0].innerHTML = `
-                <form method="post" class="edit-form" style="display: contents;">
-                    <input type="hidden" name="item_id" value="${id}">
-                    <input type="text" name="item_name" class="form-control" value="${name.replace(/"/g, '&quot;')}" required style="width: 100%;">
-            `;
-            cells[1].innerHTML = `
-                    <input type="number" name="price" class="form-control" value="${price}" step="0.01" min="1" required style="width: 150px;">
-            `;
-            cells[2].innerHTML = `
-                    <div class="actions-group">
-                        <button type="submit" name="edit_item" class="btn btn-success btn-xs"><i class="fas fa-save"></i> Save</button>
-                        <button type="button" class="btn btn-secondary btn-xs" onclick="location.reload()"><i class="fas fa-times"></i> Cancel</button>
-                    </div>
-                </form>
-            `;
-            
-            row.classList.add('edit-form-row');
-            row.setAttribute('data-original-id', id);
-        }
+            <div class="actions-group" style="flex-direction: column; gap:10px;">
+                
+                <input type="text" name="item_name" class="form-control" value="${name}" required>
+                
+                <input type="number" name="price" class="form-control" value="${price}" step="0.01" min="1" required>
+                
+                <div style="display:flex; gap:10px;">
+                    <button type="submit" name="edit_item" class="btn btn-success btn-xs">
+                        <i class="fas fa-save"></i> Save
+                    </button>
+                    
+                    <button type="button" class="btn btn-secondary btn-xs" onclick="location.reload()">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </form>
+    `;
+}
 
         // Form loading state
         document.querySelectorAll('form').forEach(form => {
