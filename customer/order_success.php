@@ -4,6 +4,24 @@ include "../config/db.php";
 $token    = $_GET['token'] ?? '';
 $order_id = $_GET['order_id'] ?? '';
 $shop_id  = $_GET['shop_id'] ?? '';
+$stmt_order = $conn->prepare("
+    SELECT status 
+    FROM order_item 
+    WHERE order_id=? AND shop_id=? 
+    LIMIT 1
+");
+$stmt_order->bind_param("ii", $order_id, $shop_id);
+$stmt_order->execute();
+$res_order = $stmt_order->get_result();
+$order = $res_order->fetch_assoc();
+
+$order_status = $order['status'] ?? 'pending';
+$stmt_order->bind_param("ii", $order_id, $shop_id);
+$stmt_order->execute();
+$res_order = $stmt_order->get_result();
+$order = $res_order->fetch_assoc();
+
+$order_status = $order['status'] ?? 'pending';
 
 if (!$token || !$shop_id || !$order_id) {
     die("Invalid request");
@@ -511,19 +529,27 @@ $items_q = $stmt_items->get_result();
 </head>
 <body>
     <!-- Success Animation -->
-    <div class="success-overlay">
-        <div class="success-check">
-            <i class="fas fa-check"></i>
-        </div>
+    <?php if($order_status != 'cancelled'): ?>
+<div class="success-overlay" id="successOverlay">
+    <div class="success-check">
+        <i class="fas fa-check"></i>
     </div>
+</div>
+<?php endif; ?>
 
     <div class="container">
         <!-- Header -->
-        <div class="header">
-            <div class="status-badge">Order Confirmed</div>
-            <h1>Thank You!</h1>
-            <p class="subtitle">Your order has been placed successfully</p>
-        </div>
+        <?php if($order_status == 'cancelled'): ?>
+    <div class="status-badge" style="background:#FEE2E2; color:#DC2626;">
+        Order Cancelled
+    </div>
+    <h1 style="color:#DC2626;">Order Cancelled</h1>
+    <p class="subtitle">Your order has been cancelled. Money will be refunded.</p>
+<?php else: ?>
+    <div class="status-badge">Order Confirmed</div>
+    <h1>Thank You!</h1>
+    <p class="subtitle">Your order has been placed successfully</p>
+<?php endif; ?>
 
         <!-- Main Card -->
         <div class="card">
@@ -557,7 +583,9 @@ $items_q = $stmt_items->get_result();
                 </div>
                 <div class="meta-item">
                     <div class="meta-label">Status</div>
-                    <div class="meta-value" style="color: var(--primary);">Confirmed</div>
+                    <div class="meta-value" style="color: <?= $order_status == 'cancelled' ? '#DC2626' : 'var(--primary)' ?>;">
+    <?= ucfirst($order_status) ?>
+</div>
                 </div>
             </div>
 
@@ -644,6 +672,33 @@ $items_q = $stmt_items->get_result();
                 }, 100);
             });
         });
+        let currentStatus = "<?= $order_status ?>";
+
+setInterval(() => {
+    fetch(window.location.href)
+        .then(res => res.text())
+        .then(html => {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, "text/html");
+
+            let newStatus = doc.querySelector(".meta-value").innerText.toLowerCase();
+
+            if (newStatus !== currentStatus) {
+                location.reload();
+            }
+        });
+}, 5000);
     </script>
+    <script>
+    const overlay = document.getElementById("successOverlay");
+
+    if (overlay) {
+        if (sessionStorage.getItem("orderShown")) {
+            overlay.style.display = "none"; // hide on reload
+        } else {
+            sessionStorage.setItem("orderShown", "true"); // show only first time
+        }
+    }
+</script>
 </body>
 </html>

@@ -21,7 +21,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $order_id   = (int)($_POST['order_id'] ?? 0);
         $new_status = trim($_POST['new_status'] ?? '');
 
-        $allowed_statuses = ['pending', 'paid', 'completed', 'cancelled'];
+        $allowed_statuses = ['pending
+        ', 'paid', 'completed', 'cancelled'];
 
         if ($order_id > 0 && in_array($new_status, $allowed_statuses)) {
             $stmt = $conn->prepare("UPDATE orders SET status = ? WHERE order_id = ? AND shop_id = ?");
@@ -1055,11 +1056,7 @@ $total_orders = count($orders);
                     <span><?= $total_orders ?></span>
                     <small>All</small>
                 </div>
-                <div class="stat-pill" onclick="filterOrders('pending')" style="color: var(--warning);">
-                    <i class="fas fa-clock"></i>
-                    <span><?= $status_counts['pending'] ?></span>
-                    <small>Pending</small>
-                </div>
+                
                 <div class="stat-pill" onclick="filterOrders('paid')" style="color: var(--info);">
                     <i class="fas fa-check-circle"></i>
                     <span><?= $status_counts['paid'] ?></span>
@@ -1158,10 +1155,9 @@ $total_orders = count($orders);
                                     <select class="status-select status-<?= $order['status'] ?>" 
                                             onchange="updateStatus(<?= $order['order_id'] ?>, this.value)"
                                             data-current="<?= $order['status'] ?>">
-                                        <option value="pending" <?= $order['status'] === 'pending' ? 'selected' : '' ?>>⏳ Pending</option>
+                                        
                                         <option value="paid" <?= $order['status'] === 'paid' ? 'selected' : '' ?>>💳 Paid</option>
-                                        <option value="completed" <?= $order['status'] === 'completed' ? 'selected' : '' ?>>✅ Completed</option>
-                                        <option value="cancelled" <?= $order['status'] === 'cancelled' ? 'selected' : '' ?>>❌ Cancelled</option>
+                                       
                                     </select>
                                 </div>
                             </div>
