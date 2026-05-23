@@ -4,7 +4,7 @@ A modern QR-based restaurant ordering web application that allows customers to s
 
 🚀 Live Demo
 
-🌐 Website: qrordering.free.nf
+🌐 Website:  https://www.qrordering.free.nf
 
 📌 Features
 QR Code based table ordering
@@ -36,7 +36,7 @@ This helps restaurants reduce waiting time and improve customer experience.
 
 ⚙️ Installation
 Clone the repository
-git clone https://github.com/your-username/your-repository-name.git
+git clone
 Move the project to your server directory
 Import the database file into MySQL
 Configure database connection in PHP files
